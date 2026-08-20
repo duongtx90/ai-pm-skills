@@ -71,11 +71,12 @@ Atomically claims an issue using Optimistic Concurrency Control (OCC).
   - `agentId` *(required, string)*: Agent UUID
 
 ### `update_issue_status`
-Transitions task status.
+Transitions task status and optionally records execution cost.
 - **Parameters**:
   - `identifier` *(required, string)*: e.g. `'AIPM-46'`
   - `status` *(required, string)*: e.g. `'In Progress'`, `'Code Review'`, `'Done'`
   - `expectedVersion` *(optional, number)*: OCC check
+  - `cost` *(optional, number)*: Execution cost in USD (e.g. `0.0002`) to persist upon task completion
 
 ### `assign_issue`
 Assigns an issue to a user by name or email.

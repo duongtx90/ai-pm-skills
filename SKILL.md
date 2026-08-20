@@ -82,4 +82,4 @@ Every issue created by an agent MUST follow this structured format:
 
 ## 4. Deep References
 
-For full tool parameter schemas, refer to [`references/api-reference.md`](file:///Users/duongtx/workspaces/viber/ai-pm/apps/ai-pm-skills/references/api-reference.md).
+For full tool parameter schemas, refer to [`references/api-reference.md`](file:///Users/duongtx/workspaces/viber/ai-pm/.agents/skills/ai-pm-skills/references/api-reference.md).
