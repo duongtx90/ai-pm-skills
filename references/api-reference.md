@@ -4,16 +4,33 @@ Detailed technical reference for `ai-pm-mcp` tools and parameter schemas. Load t
 
 ---
 
-## 1. Project Discovery & Search
+## 1. High-Efficiency Project Reporting & Discovery
+
+### `get_daily_report`
+Consolidated daily project report reading directly from pre-computed backend snapshots (1-5KB response, replaces 25+ calls). Automatically refreshes snapshot on demand if stale/dirty.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `sections` *(optional, array of strings)*: Subset of sections to return. Options: `["totals", "by_priority", "by_assignee", "today", "velocity", "stale_tasks", "alerts", "my_board"]` (default: all sections).
+
+### `list_issues`
+Returns a compact, token-efficient issue list (~200 bytes per issue, omitting descriptions and histories) with multi-criteria filtering and pagination.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `status` *(optional, string)*: Filter by status name (e.g. `'In Progress'`, `'Todo'`)
+  - `priority` *(optional, string)*: `'LOW'` | `'MEDIUM'` | `'HIGH'` | `'URGENT'`
+  - `assignee` *(optional, string)*: Filter by user name or email
+  - `limit` *(optional, number)*: Max issues to return (default: 20, max: 100)
+  - `offset` *(optional, number)*: Pagination offset (default: 0)
+  - `includeArchived` *(optional, boolean)*: Include soft-deleted/archived issues (default: false)
+
+### `get_project_summary`
+Returns high-level project status breakdown, active blockers, milestones, priority breakdown, assignee breakdown, and 24h activity.
+- **Parameters**:
+  - `projectKey` *(required, string)*: e.g. `'AIPM'`
 
 ### `list_projects`
 Lists all active projects in the workspace with keys (`projectKey`), names, and issue counters.
 - **Parameters**: None
-
-### `get_project_summary`
-Returns high-level project health, active sprint cycles, open issues, and milestones.
-- **Parameters**:
-  - `projectKey` *(required, string)*: e.g. `'AIPM'`
 
 ### `search_users`
 Searches workspace users by name or email fragment to resolve user IDs.
@@ -41,7 +58,7 @@ Creates a new task/bug in a project.
   - `dueDate` *(optional, string)*: ISO date string
 
 ### `get_issue_context`
-Fetches technical context for an issue (description, comments, sub-tasks).
+Fetches technical context for a specific issue (description, comments, sub-tasks, attachments).
 - **Parameters**:
   - `identifier` *(required, string)*: e.g. `'AIPM-46'`
   - `maxTokens` *(optional, number)*: Context budget (default: 4000)
