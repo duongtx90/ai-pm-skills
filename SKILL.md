@@ -10,6 +10,30 @@ Connects AI Agents to the **AI-PM Project Management Platform** via **Model Cont
 
 ---
 
+## 0. Project Binding & Auto-Config (`.aipm/config.json`) (CRITICAL)
+
+To prevent task misattribution and eliminate the need for the user to repeatedly specify the project key across multiple sessions:
+
+### ⚙️ Workspace Initialization Protocol:
+1. **Check for Existing Binding**:
+   - Whenever an AI Agent starts working in a workspace, it MUST check if `.aipm/config.json` exists at the workspace root.
+2. **If `.aipm/config.json` EXISTS**:
+   - Read `projectKey` from the config (e.g. `{"projectKey": "AIPM"}`).
+   - Automatically use this `projectKey` as the default for all subsequent operations (`create_issue`, `list_issues`, `get_daily_report`, `get_issue_context`, Reasonix task prompts).
+3. **If `.aipm/config.json` DOES NOT EXIST (First-time run)**:
+   - The agent **MUST prompt the user** for the target `Project Key` (or call MCP `list_projects` to present available projects for selection).
+   - Once confirmed, create the `.aipm/` directory and write `.aipm/config.json`:
+     ```json
+     {
+       "projectKey": "AIPM"
+     }
+     ```
+   - Commit `.aipm/config.json` to version control so all agents and developers share the same binding.
+4. **Disambiguation Guard**:
+   - If the project is ever ambiguous, missing, or the user requests an action on an entity not found in the bound project, the agent **MUST explicitly ask the user for clarification** before creating or modifying issues. Never guess or create issues in the wrong project!
+
+---
+
 ## 1. Quickstart & User Setup Snippet
 
 Human users can onboard any AI Agent by pasting this prompt:
