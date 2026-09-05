@@ -56,6 +56,8 @@ Creates a new task/bug in a project.
   - `milestoneId` *(optional, string)*: Milestone UUID
   - `parentId` *(optional, string)*: Parent issue UUID or identifier (e.g. `'AIPM-10'`)
   - `dueDate` *(optional, string)*: ISO date string
+  - `participants` *(optional, array of strings or objects)*: List of participants to attach. Can be user names, emails, UUIDs, or `{ user?: string, userId?: string, role?: string }` (`'ASSIGNEE'` | `'REVIEWER'` | `'NEXT_REVIEWER'` | `'OBSERVER'`, default: `'OBSERVER'`). Assignee is automatically registered with role `'ASSIGNEE'`.
+  - `participantIds` *(optional, array of UUID strings)*: List of user UUIDs to attach directly as participants (default role: `'OBSERVER'`).
 
 ### `get_issue_context`
 Fetches technical context for a specific issue (description, comments, sub-tasks, attachments).

@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
-version: 2.1.0
+version: 2.2.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -70,6 +70,7 @@ When asked to break down a feature or handle an epic:
 1. Split the work into small, atomic sub-tasks (each solvable within 1 PR).
 2. For each task, call `create_issue` with appropriate `projectKey`, `priority`, and tags.
 3. Link sub-tasks to parent features using `parentId`.
+4. Attach multi-collaborators: Use `participants` (`[{ user: "name/email", role: "REVIEWER" | "OBSERVER" }]`) and/or `participantIds` when multiple team members need to review, observe, or collaborate. The `assignee` is automatically recorded as `ASSIGNEE` in `issue_participants`.
 
 ### 📋 Rule 4: Enforce Standard Structured Markdown Descriptions
 Every issue created by an agent MUST follow this structured format:
@@ -97,7 +98,7 @@ Every issue created by an agent MUST follow this structured format:
 
 1. **Compact Listings**: Use `list_issues` for task discovery (omits descriptions/history for ~200B/issue token savings) rather than fetching full issue contexts in bulk.
 2. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
-3. **Auto-Assign Token Owner**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token.
+3. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` directly to assign reviewers/observers in a single call instead of sending separate post-creation requests.
 4. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
 5. **Task Lifecycle**:
    - `list_issues` / `list_claimable_issues` → `get_issue_context` → `claim_issue` → Develop & Verify → `add_issue_comment` → `update_issue_status("Code Review")`.
