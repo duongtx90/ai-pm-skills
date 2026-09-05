@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
-version: 2.2.0
+version: 2.3.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -92,15 +92,21 @@ Every issue created by an agent MUST follow this structured format:
 - [ ] Unit / Integration test verification (`pnpm test`)
 ```
 
+### ⚡ Rule 5: Batch Creation & Workflow Discovery (MANDATORY for >3 tasks)
+- **Status Discovery First**: Call `list_project_statuses(projectKey)` or `GET /projects/:idOrKey/statuses` to discover valid status names in the project's workflow before assigning statuses. Never guess status names blindly!
+- **Batch Creation**: When breaking down an epic into multiple sub-tasks (3 to 50 tasks), **ALWAYS call `create_issues` (batch)** instead of sending individual `create_issue` requests in a loop. This saves network round-trips and guarantees you will never hit HTTP 429 rate limits.
+
 ---
 
 ## 3. Token Efficiency & Rules of Engagement
 
 1. **Compact Listings**: Use `list_issues` for task discovery (omits descriptions/history for ~200B/issue token savings) rather than fetching full issue contexts in bulk.
 2. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
-3. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` directly to assign reviewers/observers in a single call instead of sending separate post-creation requests.
-4. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
-5. **Task Lifecycle**:
+3. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
+4. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
+5. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. If an ambiguous name is queried, HTTP 409 `AMBIGUOUS_USER_MATCH` with candidate accounts is returned to prevent misassignments.
+6. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
+7. **Task Lifecycle**:
    - `list_issues` / `list_claimable_issues` → `get_issue_context` → `claim_issue` → Develop & Verify → `add_issue_comment` → `update_issue_status("Code Review")`.
 
 ---
