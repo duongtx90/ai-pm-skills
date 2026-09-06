@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
-description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
-version: 2.3.0
+description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, search issues, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
+version: 2.4.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -100,7 +100,7 @@ Every issue created by an agent MUST follow this structured format:
 
 ## 3. Token Efficiency & Rules of Engagement
 
-1. **Compact Listings**: Use `list_issues` for task discovery (omits descriptions/history for ~200B/issue token savings) rather than fetching full issue contexts in bulk.
+1. **Compact Listings & Keyword Search**: Use `search_issues(query, projectKey)` or `list_issues(projectKey, query)` for fast keyword discovery across titles and descriptions (e.g. `'tinh luyện'`, `'auth'`) rather than fetching full issue contexts in bulk (~200B/issue token savings).
 2. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
 3. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
 4. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.

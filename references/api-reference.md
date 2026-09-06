@@ -16,12 +16,21 @@ Consolidated daily project report reading directly from pre-computed backend sna
 Returns a compact, token-efficient issue list (~200 bytes per issue, omitting descriptions and histories) with multi-criteria filtering and pagination.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `query` *(optional, string)*: Keyword or phrase to search across issue titles and descriptions
   - `status` *(optional, string)*: Filter by status name (e.g. `'In Progress'`, `'Todo'`)
   - `priority` *(optional, string)*: `'LOW'` | `'MEDIUM'` | `'HIGH'` | `'URGENT'`
   - `assignee` *(optional, string)*: Filter by user name or email
   - `limit` *(optional, number)*: Max issues to return (default: 20, max: 100)
   - `offset` *(optional, number)*: Pagination offset (default: 0)
   - `includeArchived` *(optional, boolean)*: Include soft-deleted/archived issues (default: false)
+
+### `search_issues`
+Searches issues across title and description by keyword or phrase (e.g. `'tinh luyện'`, `'character sheet'`). Returns matching issues with status, priority, and assignee.
+- **Parameters**:
+  - `query` *(required, string)*: Search keyword or phrase
+  - `projectKey` *(optional, string)*: Optional project key prefix (e.g. `'PW'`, `'CPN'`)
+  - `limit` *(optional, number)*: Max matching issues to return (default: 20, max: 50)
+  - `includeArchived` *(optional, boolean)*: Include archived issues (default: false)
 
 ### `get_project_summary`
 Returns high-level project status breakdown, active blockers, milestones, priority breakdown, assignee breakdown, and 24h activity.
