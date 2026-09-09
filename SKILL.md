@@ -150,7 +150,7 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
      ```json
      {
        "projectKey": "PW",
-       "items": [
+       "issues": [
          { "title": "[UI] Quest tracker hud", "tags": ["ui", "quest"], "description": "..." },
          { "title": "[VFX] Portal spawn particles", "tags": ["vfx"], "description": "..." }
        ]

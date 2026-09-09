@@ -131,11 +131,75 @@ Flags a blocker on a task.
 
 ---
 
-## 3. Sprint Cycles & Wiki Documentation
+## 3. Sprint Cycles & Focus Scheduling
 
-### `create_cycle` & `add_issue_to_cycle`
-Creates a sprint cycle (`projectKey`, `name`, `startsAt`, `endsAt`) and attaches issues.
+### `create_cycle`
+Creates a sprint cycle for a project.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `name` *(required, string)*: Cycle name (e.g. `'Sprint 14'`)
+  - `startsAt` *(required, string)*: ISO start date string (e.g. `'2026-09-01'`)
+  - `endsAt` *(required, string)*: ISO end date string (e.g. `'2026-09-14'`)
 
-### `search_wiki_pages`, `get_wiki_page`, `create_or_update_wiki_page`, `link_issue_to_wiki`
-Manages project documentation pages and links them to tracking issues.
+### `add_issue_to_cycle`
+Attaches a single issue to a sprint cycle.
+- **Parameters**:
+  - `cycleId` *(required, string)*: Target cycle UUID
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-46'`)
+
+### `add_issues_to_cycle`
+Batch-attaches multiple issues to a cycle in a single call (up to 50 issues).
+- **Parameters**:
+  - `cycleId` *(required, string)*: Target cycle UUID
+  - `identifiers` *(required, array of strings)*: Array of issue identifiers (e.g. `["AIPM-46", "AIPM-47"]`)
+  - `atomic` *(optional, boolean, default: false)*: If true, any failure rolls back all additions.
+
+### `schedule_focus_time`
+Schedules dedicated focus/work time for an issue on the calendar.
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-46'`)
+  - `startsAt` *(required, string)*: ISO start date-time string (e.g. `'2026-09-10T09:00:00Z'`)
+  - `durationHours` *(optional, number, default: 2)*: Duration in hours.
+
+### `get_schedule`
+Retrieves scheduled focus time and calendar events for a project.
+- **Parameters**:
+  - `projectKey` *(optional, string)*: Filter schedule by project key prefix (e.g. `'AIPM'`)
+
+---
+
+## 4. Wiki Documentation & Specification Linking
+
+### `create_or_update_wiki_page`
+Creates a new project wiki documentation page or updates an existing page if the slug matches.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`, `'PW'`)
+  - `slug` *(required, string)*: Unique URL-safe slug path for the page (e.g. `'architecture/overview'`, `'specs/quest-system'`)
+  - `title` *(required, string)*: Page title (e.g. `'Quest System Specifications'`)
+  - `content` *(required, string)*: Full page content in Markdown, Mermaid diagram, Drawio, or HTML
+  - `format` *(optional, enum)*: Content format: `'MARKDOWN'` | `'MERMAID'` | `'DRAWIO'` | `'HTML'` (default: `'MARKDOWN'`)
+- **Returns**: `{ success: true, wiki_page: { id, project_id, slug, title, content, format, version, ... } }`
+
+### `get_wiki_page`
+Retrieves a project wiki documentation page by project key and slug.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`, `'PW'`)
+  - `slug` *(required, string)*: Wiki page slug (e.g. `'architecture/overview'`)
+- **Returns**: Full wiki page object with `id`, `slug`, `title`, `content`, `format`, `version`, `created_at`, `updated_at`. Returns error `"WIKI_PAGE_NOT_FOUND"` if non-existent.
+
+### `search_wiki_pages`
+Searches wiki documentation pages within a project by keyword or title fragment.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`, `'PW'`)
+  - `query` *(optional, string)*: Keyword or phrase to search across wiki titles and content
+- **Returns**: `{ count: number, wiki_pages: Array<{ id, slug, title, snippet, format, updated_at }> }`
+
+### `link_issue_to_wiki`
+Links a tracking issue to a wiki document/specification to establish traceability.
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-46'`, `'PW-207'`)
+  - `wikiSlug` *(required, string)*: Slug of the target wiki page to link to (e.g. `'specs/quest-system'`)
+  - `relationType` *(optional, enum)*: Relationship type: `'SPECIFIES'` | `'IMPLEMENTS'` | `'DOCUMENTS'` | `'RELATED'` (default: `'SPECIFIES'`)
+- **Returns**: `{ success: true, message: "Linked issue AIPM-46 to wiki page 'specs/quest-system'" }`
+
 
