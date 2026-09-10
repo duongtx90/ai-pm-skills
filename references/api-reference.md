@@ -223,4 +223,29 @@ Links a tracking issue to a wiki document/specification to establish traceabilit
   - `relationType` *(optional, enum)*: Relationship type: `'SPECIFIES'` | `'IMPLEMENTS'` | `'DOCUMENTS'` | `'RELATED'` (default: `'SPECIFIES'`)
 - **Returns**: `{ success: true, message: "Linked issue AIPM-46 to wiki page 'specs/quest-system'" }`
 
+### `upload_wiki_attachment`
+Uploads an image attachment to a project wiki page using Base64 encoded file data.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
+  - `filename` *(required, string)*: Attachment filename (e.g. `'diagram.png'`)
+  - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
+  - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+
+### `list_wiki_attachments`
+Lists all image attachments uploaded to a project wiki page.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
+- **Returns**: Array of wiki attachment objects.
+
+### `delete_wiki_attachment`
+Deletes an image attachment from a project wiki page.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+  - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
+  - `attachmentId` *(required, string)*: UUID of attachment to delete
+- **Returns**: `{ success: true, message: "Attachment deleted" }`
+
 
