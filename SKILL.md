@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, search issues, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
-version: 2.6.0
+version: 2.7.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -156,6 +156,16 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
        ]
      }
      ```
+
+### 🖼️ Rule 9: Image & Attachment Management (Issue & Wiki)
+- **Zero S3 / Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
+- **Dual-Mode Upload**: Agents can upload screenshots, architectural diagrams, and error dumps using `base64Data`:
+  - **Issue Attachments**: `upload_issue_attachment(identifier, filename, base64Data, contentType)`
+  - **Wiki Attachments**: `upload_wiki_attachment(projectKey, slug, filename, base64Data, contentType)`
+- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`). Agents should embed the image into the markdown body using standard markdown: `![filename](/api/v1/attachments/view/<id>)`.
+- **Discovery & Cleanup**:
+  - Issues: `list_issue_attachments(identifier)` / `delete_issue_attachment(identifier, attachmentId)`
+  - Wiki: `list_wiki_attachments(projectKey, slug)` / `delete_wiki_attachment(projectKey, slug, attachmentId)`
 
 ---
 
