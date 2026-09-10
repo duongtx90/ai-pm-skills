@@ -129,6 +129,27 @@ Flags a blocker on a task.
   - `reason` *(required, string)*: Cause of blocker
   - `blockerType` *(optional, string)*: `'TECHNICAL'` | `'DEPENDENCY'` | `'DOMAIN'`
 
+### `upload_issue_attachment`
+Uploads an image attachment to an issue using Base64 encoded file data.
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
+  - `filename` *(required, string)*: Attachment filename (e.g. `'screenshot.png'`)
+  - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
+  - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+
+### `list_issue_attachments`
+Lists all image attachments for an issue.
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
+- **Returns**: Array of attachment objects.
+
+### `delete_issue_attachment`
+Deletes an attachment from an issue.
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
+  - `attachmentId` *(required, string)*: UUID of attachment to delete
+
 ---
 
 ## 3. Sprint Cycles & Focus Scheduling
