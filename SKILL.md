@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
-description: "AI-PM Project Management & Task Execution Skill. Guides AI Agents (Claude Code, Gemini, Cursor, Windsurf, OpenCode) to connect via MCP, act as Project Managers (task breakdown, structured descriptions, search issues, task de-duplication, daily reports), and execute task lifecycles with maximum token efficiency."
-version: 2.7.0
+description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
+version: 2.8.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -10,27 +10,32 @@ Connects AI Agents to the **AI-PM Project Management Platform** via **Model Cont
 
 ---
 
-## 0. Project Binding & Auto-Config (`.aipm/config.json`) (CRITICAL)
+## 0. Strict Opt-In & Project Binding (`.aipm/config.json`) (CRITICAL)
 
-To prevent task misattribution and eliminate the need for the user to repeatedly specify the project key across multiple sessions:
+To prevent task misattribution, unsolicited MCP calls, and corrupting AIPM with arbitrary tasks:
 
-### ⚙️ Workspace Initialization Protocol:
-1. **Check for Existing Binding**:
-   - Whenever an AI Agent starts working in a workspace, it MUST check if `.aipm/config.json` exists at the workspace root.
-2. **If `.aipm/config.json` EXISTS**:
-   - Read `projectKey` from the config (e.g. `{"projectKey": "AIPM"}`).
+### 🚨 Rule 0.1: Strict Opt-In Protocol (MANDATORY)
+1. **Default Behavior (No Binding)**:
+   - If `.aipm/config.json` **DOES NOT EXIST** at the workspace root and the user **did NOT explicitly request** managing tasks on AI-PM:
+     - **DO NOT invoke ANY `ai-pm-mcp` tools** (including `list_projects`, `create_issue`, `list_issues`).
+     - **DO NOT prompt the user** asking if they want to connect to AI-PM.
+     - **DO NOT fuzzy match or guess** existing projects to force-fit or stuff tasks into.
+     - Execute the user's request locally as a standard coding assistant without touching `ai-pm-mcp`.
+2. **When `.aipm/config.json` EXISTS**:
+   - Read `projectKey` from `.aipm/config.json` (e.g. `{"projectKey": "AIPM"}`).
    - Automatically use this `projectKey` as the default for all subsequent operations (`create_issue`, `list_issues`, `get_daily_report`, `get_issue_context`, Reasonix task prompts).
-3. **If `.aipm/config.json` DOES NOT EXIST (First-time run)**:
-   - The agent **MUST prompt the user** for the target `Project Key` (or call MCP `list_projects` to present available projects for selection).
-   - Once confirmed, create the `.aipm/` directory and write `.aipm/config.json`:
-     ```json
-     {
-       "projectKey": "AIPM"
-     }
-     ```
-   - Commit `.aipm/config.json` to version control so all agents and developers share the same binding.
-4. **Disambiguation Guard**:
-   - If the project is ever ambiguous, missing, or the user requests an action on an entity not found in the bound project, the agent **MUST explicitly ask the user for clarification** before creating or modifying issues. Never guess or create issues in the wrong project!
+3. **Explicit User Initialization Only**:
+   - ONLY when the user **explicitly asks** to connect or bind the current workspace to an AI-PM project (e.g. *"kết nối repo này với AIPM"*, *"setup AIPM cho dự án này"*):
+     - Prompt the user or call MCP `list_projects` to let the user select the project.
+     - Write `.aipm/config.json`:
+       ```json
+       {
+         "projectKey": "PROJECT_KEY"
+       }
+       ```
+     - Commit `.aipm/config.json` to version control so all team members and agents share the binding.
+4. **Zero Guessing / Anti-Stuffing Guard**:
+   - If a task does not belong to the bound project, or if the target project is ambiguous: **NEVER GUESS OR STUFF TASKS INTO ARBITRARY PROJECTS**. Explicitly clarify with the user first.
 
 ---
 
@@ -171,21 +176,24 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 
 ## 3. Token Efficiency & Rules of Engagement
 
-1. **Compact Listings & Keyword Search**: Use `search_issues(query, projectKey)` or `list_issues(projectKey, query)` for fast keyword discovery across titles and descriptions (e.g. `'tinh luyện'`, `'auth'`) rather than fetching full issue contexts in bulk (~200B/issue token savings).
-2. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
-3. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
-4. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
-5. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. If an ambiguous name is queried, HTTP 409 `AMBIGUOUS_USER_MATCH` with candidate accounts is returned to prevent misassignments.
-6. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
-7. **Task Lifecycle & Handoff Clarification**:
+1. **Compact Listings & Keyword Search**: Use `search_issues(query, projectKey)` or `list_issues(projectKey, query)` for fast keyword discovery across titles and descriptions (e.g. `'tinh luyện'`, `'auth'`) rather than fetching full issue contexts in bulk (~200B/issue token savings). Use `includeTags: true` to get tags directly in list results without extra round-trips.
+2. **Bulk Read Over Loops (MANDATORY)**: When needing details/status/tags for multiple issues (up to 200 items), **ALWAYS call `get_issues_batch({ identifiers: [...] })`** in a single call instead of firing iterative `get_issue_context` calls in a loop. Firing hundreds of individual requests will hit the HTTP 429 rate limit (~100 req/min).
+3. **Feature & Tag Discovery**: Call `list_project_tags(projectKey)` to see all active tags and their issue counts. Call `get_daily_report(projectKey, ["by_tag"])` for feature-level progress and completion rates. Filter issues by tags using `list_issues({ projectKey, tags: ["UI"], tagMode: "AND" | "OR" })`.
+4. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
+5. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
+6. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
+7. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. If an ambiguous name is queried, HTTP 409 `AMBIGUOUS_USER_MATCH` with candidate accounts is returned to prevent misassignments.
+8. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
+9. **Task Lifecycle & Handoff Clarification**:
    - **Coding Agent / Subagent**: `claim_issue` → Develop & Verify → `add_issue_comment` (Rule 6 Template) → `update_issue_status("Code Review", expectedVersion)`.
    - **Parent Orchestrator / Reviewer**: Review & QA → Git Push → Deploy (`./deploy/deploy-backend.sh`) → `update_issue_status("Done", expectedVersion)`.
    - Coding agents MUST NEVER unilaterally mark tasks `Done` before parent review and deployment.
-8. **Anti-Patterns**:
-   - ❌ NEVER omit `tags` when creating issues.
-   - ❌ NEVER dump entire raw logs, compiler dumps, or full file diffs into comments.
-   - ❌ NEVER write philosophical essays or restate requirements.
-   - ❌ NEVER hallucinate numerical costs when the runner does not provide them.
+10. **Anti-Patterns**:
+    - ❌ NEVER fire iterative `get_issue_context` calls in a loop (always use `get_issues_batch`).
+    - ❌ NEVER omit `tags` when creating issues.
+    - ❌ NEVER dump entire raw logs, compiler dumps, or full file diffs into comments.
+    - ❌ NEVER write philosophical essays or restate requirements.
+    - ❌ NEVER hallucinate numerical costs when the runner does not provide them.
 
 ---
 
