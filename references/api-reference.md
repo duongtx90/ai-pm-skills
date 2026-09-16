@@ -10,7 +10,22 @@ Detailed technical reference for `ai-pm-mcp` tools and parameter schemas. Load t
 Consolidated daily project report reading directly from pre-computed backend snapshots (1-5KB response, replaces 25+ calls). Automatically refreshes snapshot on demand if stale/dirty.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
-  - `sections` *(optional, array of strings)*: Subset of sections to return. Options: `["totals", "by_priority", "by_assignee", "today", "velocity", "stale_tasks", "alerts", "my_board"]` (default: all sections).
+  - `sections` *(optional, array of strings)*: Subset of sections to return. Options: `["totals", "by_priority", "by_assignee", "today", "velocity", "stale_tasks", "alerts", "my_board", "by_tag"]` (default: all sections).
+    - `totals`: `{ total_issues, done, in_review, todo, in_progress, backlog, rejected, archived }`
+    - `by_tag`: Feature progress breakdown returning `{ [tag]: { total, by_status: { Done, Todo, In Progress, Code Review, Backlog, Rejected }, done_pct } }`.
+
+### `get_issues_batch`
+Bulk issue reader (AIPM-71) fetching up to 200 issues in a single request. Returns issue status, assignees, tags, and participants in 1 round-trip. Eliminates iterative N+1 loops and avoids HTTP 429 rate limits.
+- **Parameters**:
+  - `identifiers` *(required, array of strings)*: Array of issue identifiers (e.g. `["AIPM-69", "AIPM-70"]`, max 200)
+  - `fields` *(optional, array of strings)*: Subset of fields to retrieve (e.g. `["description", "tags"]`). If omitted, returns all standard fields.
+- **Returns**: `{ count: number, issues: Array<{ id, identifier, number, title, description?, priority, status, assignee, project_key, tags, participants, is_archived, version, created_at, updated_at }> }`
+
+### `list_project_tags`
+Lists all tags associated with a project along with the total issue count for each tag (AIPM-73). Used for feature discovery and progress overview without scanning all issues.
+- **Parameters**:
+  - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
+- **Returns**: Array of `{ id: string, name: string, color: string, issue_count: number }`
 
 ### `list_issues`
 Returns a compact, token-efficient issue list (~200 bytes per issue, omitting descriptions and histories) with multi-criteria filtering and pagination.
@@ -20,6 +35,9 @@ Returns a compact, token-efficient issue list (~200 bytes per issue, omitting de
   - `status` *(optional, string)*: Filter by status name (e.g. `'In Progress'`, `'Todo'`)
   - `priority` *(optional, string)*: `'LOW'` | `'MEDIUM'` | `'HIGH'` | `'URGENT'`
   - `assignee` *(optional, string)*: Filter by user name or email
+  - `tags` *(optional, array of strings)*: Filter by tag names or tag UUIDs (e.g. `["bug", "ui"]`)
+  - `tagMode` *(optional, enum)*: `'AND'` | `'OR'` (default: `'OR'`)
+  - `includeTags` *(optional, boolean, default: false)*: When true, attaches `tags: [{ id, name, color }]` directly to each issue item without extra queries
   - `limit` *(optional, number)*: Max issues to return (default: 20, max: 100)
   - `offset` *(optional, number)*: Pagination offset (default: 0)
   - `includeArchived` *(optional, boolean)*: Include soft-deleted/archived issues (default: false)
@@ -29,6 +47,8 @@ Searches issues across title and description by keyword or phrase (e.g. `'tinh l
 - **Parameters**:
   - `query` *(required, string)*: Search keyword or phrase
   - `projectKey` *(optional, string)*: Optional project key prefix (e.g. `'PW'`, `'CPN'`)
+  - `tags` *(optional, array of strings)*: Filter by tag names or tag UUIDs
+  - `tagMode` *(optional, enum)*: `'AND'` | `'OR'` (default: `'OR'`)
   - `limit` *(optional, number)*: Max matching issues to return (default: 20, max: 50)
   - `includeArchived` *(optional, boolean)*: Include archived issues (default: false)
 
