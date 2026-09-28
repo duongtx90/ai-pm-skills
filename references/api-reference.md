@@ -175,6 +175,43 @@ Deletes an attachment from an issue.
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
   - `attachmentId` *(required, string)*: UUID of attachment to delete
 
+### Review & approval flow (v2.11.0)
+Projects with an approval policy (`any` = one REVIEWER, `all` = every REVIEWER, `two_step` = every REVIEWER then every NEXT_REVIEWER; default `none`) only reach Done through an approved review round — `update_issue_status`/`update_issue` to a Done status returns `409 APPROVAL_REQUIRED`. Reviewers are the issue's `REVIEWER` / `NEXT_REVIEWER` participants; the assignee and whoever submitted the round never review it. Agents act as their token owner and need a `write` scope + `AUTONOMOUS` autonomy for the write tools below. Errors come back as `isError` with the API code in `error` and a `hint`.
+
+### `request_review`
+Submits an issue for review: opens a new round (history is kept) with a PENDING approval per REVIEWER and moves the issue to the project's review (`IN_REVIEW`) status.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+- **Returns**: `{ success, round: { round, policy, status, activeStep, approvals[] }, issue: { identifier, status_id, version } }`
+- **Errors**: `409 APPROVAL_DISABLED` (policy `none` — use `update_issue_status`), `409 REVIEW_ALREADY_OPEN`, `400 NO_REVIEWERS` / `NO_NEXT_REVIEWER` (add reviewers other than the assignee and yourself first).
+
+### `get_issue_approvals`
+Read-only approval state: `{ identifier, policy, currentRound, currentStatus, rounds[] }`; each round (newest first) has `status` (`PENDING` | `APPROVED` | `CHANGES_REQUESTED` | `REJECTED`), `activeStep` and `approvals[]` with `approver`, `step`, `decision`, `note`, `decidedAt`, `onBehalf`. Use it to read a reviewer's change requests.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+
+### `approve_issue`
+Records APPROVED on **your own** pending approval in the open round. When the round completes, the issue moves to Done automatically (and step 2 opens for `two_step`).
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(optional, string, ≤ 4000 chars)*: Comment for the assignee
+- **Returns**: `{ success, outcome, approval, round, onBehalf, issue }` — `outcome` is the round status after your decision (`PENDING` while other reviewers are still due).
+- **Errors**: `409 NO_PENDING_APPROVAL` (you are not a pending reviewer — NEXT_REVIEWERs get theirs after step 1), `409 ALREADY_DECIDED`, `409 ROUND_CLOSED`, `409 NO_REVIEW_ROUND` (never submitted), `409 APPROVAL_DISABLED`, `403 SELF_APPROVAL` (assignee / round requester), `403` role or token scope/autonomy.
+
+### `request_changes`
+Records CHANGES_REQUESTED on your pending approval: closes the round and moves the issue back to In Progress. The assignee fixes it and calls `request_review` again (new round).
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(required, string, ≤ 4000 chars)*: What must change
+- **Errors**: same as `approve_issue`; an empty `note` is refused before calling the API.
+
+### `reject_issue`
+Records REJECTED on your pending approval: closes the round and moves the issue to the project's Rejected status. Prefer `request_changes` when the work can be fixed.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(required, string, ≤ 4000 chars)*: Why it is rejected
+- **Errors**: same as `request_changes`.
+
 ---
 
 ## 3. Sprint Cycles & Focus Scheduling

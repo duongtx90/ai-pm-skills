@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.10.0
+version: 2.11.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -185,12 +185,13 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 5. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
 6. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
 7. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. An ambiguous name returns an `isError` result for HTTP 409 `AMBIGUOUS_USER_MATCH` — call `search_users` and retry with the exact email or user id.
-8. **Errors & Access (v2.8.2)**: Every tool goes through the REST API with the token owner's rights — there is no direct-DB fallback. A failed call returns `isError: true` with JSON `{ success: false, status, error, hint }`: `401` token invalid/expired → create a new agent token; `403` the token owner lacks the project role, or the token's scope (`*`, `read`, `write:KEY`) / autonomy (only `AUTONOMOUS` may write; `SUGGEST_ONLY`/`REQUIRE_APPROVAL` are read-only) does not allow it — the message says which; `404` check identifier/projectKey (`list_projects`, `search_issues`); `409` version conflict → re-read with `get_issue_context` and retry with the latest `version`; `429` retry later. Follow the `hint` instead of retrying blindly.
+8. **Errors & Access (v2.8.2)**: Every tool goes through the REST API with the token owner's rights — there is no direct-DB fallback. A failed call returns `isError: true` with JSON `{ success: false, status, error, hint }`: `401` token invalid/expired → create a new agent token; `403` the token owner lacks the project role, or the token's scope (`*`, `read`, `write:KEY`) / autonomy (only `AUTONOMOUS` may write; `SUGGEST_ONLY`/`REQUIRE_APPROVAL` are read-only) does not allow it — the message says which; `404` check identifier/projectKey (`list_projects`, `search_issues`); `409` version conflict → re-read with `get_issue_context` and retry with the latest `version` (approval codes such as `APPROVAL_REQUIRED` carry their own hint, see rule 10); `429` retry later. Follow the `hint` instead of retrying blindly.
 9. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
 10. **Task Lifecycle & Handoff Clarification**:
    - **Coding Agent / Subagent**: `claim_issue` → Develop & Verify → `add_issue_comment` (Rule 6 Template) → `update_issue_status("Code Review", expectedVersion)`.
    - **Parent Orchestrator / Reviewer**: Review & QA → Git Push → Deploy (`./deploy/deploy-backend.sh`) → `update_issue_status("Done", expectedVersion)`.
    - Coding agents MUST NEVER unilaterally mark tasks `Done` before parent review and deployment.
+   - **Projects with an approval policy (v2.11.0)**: moving to Done returns `409 APPROVAL_REQUIRED` until a review round is approved. Assignee/coding agent: completion comment → `request_review(identifier)` (reviewers = the issue's REVIEWER / NEXT_REVIEWER participants, never the assignee or the requester). Reviewer (you are a REVIEWER, acting as your token owner): read the work, then `approve_issue(identifier, note?)`, `request_changes(identifier, note)` (back to In Progress; the assignee fixes it and calls `request_review` again) or `reject_issue(identifier, note)`. The last required approval moves the issue to Done automatically — do not call `update_issue_status("Done")`. Check rounds and reviewer notes with `get_issue_approvals(identifier)`. Error codes (`NO_PENDING_APPROVAL`, `ALREADY_DECIDED`, `ROUND_CLOSED`, `SELF_APPROVAL`, `APPROVAL_DISABLED`) are final for that call — follow the `hint`, don't retry. See `references/api-reference.md` → "Review & approval flow".
 11. **Anti-Patterns**:
     - ❌ NEVER fire iterative `get_issue_context` calls in a loop (always use `get_issues_batch`).
     - ❌ NEVER omit `tags` when creating issues.
