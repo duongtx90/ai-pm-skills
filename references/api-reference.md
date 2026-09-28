@@ -150,16 +150,16 @@ Flags a blocker on a task.
   - `blockerType` *(optional, string)*: `'TECHNICAL'` | `'DEPENDENCY'` | `'DOMAIN'`
 
 ### `upload_issue_attachment`
-Uploads an image attachment to an issue using Base64 encoded file data.
+Uploads a file attachment to an issue using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
   - `filename` *(required, string)*: Attachment filename (e.g. `'screenshot.png'`)
   - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
   - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
-- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, `url` (`/api/v1/attachments/view/:id`, the stable reference — requires auth), plus `signed_url`/`signed_url_expires_at` (short-lived public link for browsers) and `storage` (workspace usage, `warning: true` at ≥ 80%).
 
 ### `list_issue_attachments`
-Lists all image attachments for an issue.
+Lists all attachments for an issue.
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
 - **Returns**: Array of attachment objects.
@@ -244,24 +244,24 @@ Links a tracking issue to a wiki document/specification to establish traceabilit
 - **Returns**: `{ success: true, message: "Linked issue AIPM-46 to wiki page 'specs/quest-system'" }`
 
 ### `upload_wiki_attachment`
-Uploads an image attachment to a project wiki page using Base64 encoded file data.
+Uploads a file attachment to a project wiki page using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
   - `filename` *(required, string)*: Attachment filename (e.g. `'diagram.png'`)
   - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
   - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
-- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, `url` (`/api/v1/attachments/view/:id`, the stable reference — requires auth), plus `signed_url`/`signed_url_expires_at` (short-lived public link for browsers) and `storage` (workspace usage, `warning: true` at ≥ 80%).
 
 ### `list_wiki_attachments`
-Lists all image attachments uploaded to a project wiki page.
+Lists all attachments uploaded to a project wiki page.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
 - **Returns**: Array of wiki attachment objects.
 
 ### `delete_wiki_attachment`
-Deletes an image attachment from a project wiki page.
+Deletes an attachment from a project wiki page.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
