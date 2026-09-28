@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.9.0
+version: 2.10.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -178,7 +178,8 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 ## 3. Token Efficiency & Rules of Engagement
 
 1. **Compact Listings & Keyword Search**: Use `search_issues(query, projectKey)` or `list_issues(projectKey, query)` for fast keyword discovery across titles and descriptions (e.g. `'tinh luyện'`, `'auth'`) rather than fetching full issue contexts in bulk (~200B/issue token savings). Use `includeTags: true` to get tags directly in list results without extra round-trips.
-2. **Bulk Read Over Loops (MANDATORY)**: When needing details/status/tags for multiple issues (up to 200 items), **ALWAYS call `get_issues_batch({ identifiers: [...] })`** in a single call instead of firing iterative `get_issue_context` calls in a loop. Firing hundreds of individual requests will hit the HTTP 429 rate limit (~100 req/min).
+2. **Paginate with cursors (v2.10.0)**: list/search tools return `nextCursor` when more results exist — call again with `cursor: nextCursor` (same other arguments) instead of raising `limit`. Tool annotations mark read-only vs destructive tools; confirm with the user before destructive ones (`archive_issue`, `delete_*`, `update_issue` overwriting description/tags, `set_issue_participants`, `create_or_update_wiki_page`). Full generated reference: `references/mcp-tools.generated.md`.
+2b. **Bulk Read Over Loops (MANDATORY)**: When needing details/status/tags for multiple issues (up to 200 items), **ALWAYS call `get_issues_batch({ identifiers: [...] })`** in a single call instead of firing iterative `get_issue_context` calls in a loop. Firing hundreds of individual requests will hit the HTTP 429 rate limit (~100 req/min).
 3. **Feature & Tag Discovery**: Call `list_project_tags(projectKey)` to see all active tags and their issue counts. Call `get_daily_report(projectKey, ["by_tag"])` for feature-level progress and completion rates. Filter issues by tags using `list_issues({ projectKey, tags: ["UI"], tagMode: "AND" | "OR" })`.
 4. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
 5. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
