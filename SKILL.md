@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.8.2
+version: 2.9.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -163,11 +163,12 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
      ```
 
 ### 🖼️ Rule 9: Image & Attachment Management (Issue & Wiki)
-- **Zero S3 / Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
+- **Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
 - **Dual-Mode Upload**: Agents can upload screenshots, architectural diagrams, and error dumps using `base64Data`:
   - **Issue Attachments**: `upload_issue_attachment(identifier, filename, base64Data, contentType)`
   - **Wiki Attachments**: `upload_wiki_attachment(projectKey, slug, filename, base64Data, contentType)`
-- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`). Agents should embed the image into the markdown body using standard markdown: `![filename](/api/v1/attachments/view/<id>)`.
+- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`, a stable reference that needs auth — the web app swaps it for a short-lived signed link when rendering). Embed images with `![filename](/api/v1/attachments/view/<id>)` and other files as links `[filename](/api/v1/attachments/view/<id>)`. Never paste `signed_url` into content (it expires in ~15 min).
+- **Allowed files (v2.9.0)**: jpg/png/gif/webp ≤ 10 MB; pdf/docx/xlsx/pptx/zip ≤ 20 MB; csv/txt. Type is detected from content; svg/html/exe are rejected. Workspace storage quota applies.
 - **Discovery & Cleanup**:
   - Issues: `list_issue_attachments(identifier)` / `delete_issue_attachment(identifier, attachmentId)`
   - Wiki: `list_wiki_attachments(projectKey, slug)` / `delete_wiki_attachment(projectKey, slug, attachmentId)`
