@@ -1,5 +1,10 @@
 # AI-PM MCP Tool API Reference
 
+> **Complete, always-current tool list:** [`mcp-tools.generated.md`](./mcp-tools.generated.md) — generated from the backend `TOOL_DEFINITIONS` (`pnpm docs:mcp`), including titles, read-only/destructive annotations, input and output schemas. This file is the curated guide; when they disagree, the generated file wins.
+>
+> **Since v2.10.0:** list tools (`list_*`, `search_*`, `get_issues_batch`) return `structuredContent` and page with an opaque `cursor` → pass back `nextCursor` (same other arguments) until it is absent; `list_issues` still accepts `offset`. Every result stays under 150,000 characters (`truncated: true` + `note` when a page was cut). `search_issues` with a blank `query` is an error.
+
+
 Detailed technical reference for `ai-pm-mcp` tools and parameter schemas. Load this file when detailed parameter types or edge cases are needed.
 
 ---
