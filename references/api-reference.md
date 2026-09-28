@@ -1,5 +1,10 @@
 # AI-PM MCP Tool API Reference
 
+> **Complete, always-current tool list:** [`mcp-tools.generated.md`](./mcp-tools.generated.md) — generated from the backend `TOOL_DEFINITIONS` (`pnpm docs:mcp`), including titles, read-only/destructive annotations, input and output schemas. This file is the curated guide; when they disagree, the generated file wins.
+>
+> **Since v2.10.0:** list tools (`list_*`, `search_*`, `get_issues_batch`) return `structuredContent` and page with an opaque `cursor` → pass back `nextCursor` (same other arguments) until it is absent; `list_issues` still accepts `offset`. Every result stays under 150,000 characters (`truncated: true` + `note` when a page was cut). `search_issues` with a blank `query` is an error.
+
+
 Detailed technical reference for `ai-pm-mcp` tools and parameter schemas. Load this file when detailed parameter types or edge cases are needed.
 
 ---
@@ -150,16 +155,16 @@ Flags a blocker on a task.
   - `blockerType` *(optional, string)*: `'TECHNICAL'` | `'DEPENDENCY'` | `'DOMAIN'`
 
 ### `upload_issue_attachment`
-Uploads an image attachment to an issue using Base64 encoded file data.
+Uploads a file attachment to an issue using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
   - `filename` *(required, string)*: Attachment filename (e.g. `'screenshot.png'`)
   - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
   - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
-- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, `url` (`/api/v1/attachments/view/:id`, the stable reference — requires auth), plus `signed_url`/`signed_url_expires_at` (short-lived public link for browsers) and `storage` (workspace usage, `warning: true` at ≥ 80%).
 
 ### `list_issue_attachments`
-Lists all image attachments for an issue.
+Lists all attachments for an issue.
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
 - **Returns**: Array of attachment objects.
@@ -169,6 +174,43 @@ Deletes an attachment from an issue.
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
   - `attachmentId` *(required, string)*: UUID of attachment to delete
+
+### Review & approval flow (v2.11.0)
+Projects with an approval policy (`any` = one REVIEWER, `all` = every REVIEWER, `two_step` = every REVIEWER then every NEXT_REVIEWER; default `none`) only reach Done through an approved review round — `update_issue_status`/`update_issue` to a Done status returns `409 APPROVAL_REQUIRED`. Reviewers are the issue's `REVIEWER` / `NEXT_REVIEWER` participants; the assignee and whoever submitted the round never review it. Agents act as their token owner and need a `write` scope + `AUTONOMOUS` autonomy for the write tools below. Errors come back as `isError` with the API code in `error` and a `hint`.
+
+### `request_review`
+Submits an issue for review: opens a new round (history is kept) with a PENDING approval per REVIEWER and moves the issue to the project's review (`IN_REVIEW`) status.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+- **Returns**: `{ success, round: { round, policy, status, activeStep, approvals[] }, issue: { identifier, status_id, version } }`
+- **Errors**: `409 APPROVAL_DISABLED` (policy `none` — use `update_issue_status`), `409 REVIEW_ALREADY_OPEN`, `400 NO_REVIEWERS` / `NO_NEXT_REVIEWER` (add reviewers other than the assignee and yourself first).
+
+### `get_issue_approvals`
+Read-only approval state: `{ identifier, policy, currentRound, currentStatus, rounds[] }`; each round (newest first) has `status` (`PENDING` | `APPROVED` | `CHANGES_REQUESTED` | `REJECTED`), `activeStep` and `approvals[]` with `approver`, `step`, `decision`, `note`, `decidedAt`, `onBehalf`. Use it to read a reviewer's change requests.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+
+### `approve_issue`
+Records APPROVED on **your own** pending approval in the open round. When the round completes, the issue moves to Done automatically (and step 2 opens for `two_step`).
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(optional, string, ≤ 4000 chars)*: Comment for the assignee
+- **Returns**: `{ success, outcome, approval, round, onBehalf, issue }` — `outcome` is the round status after your decision (`PENDING` while other reviewers are still due).
+- **Errors**: `409 NO_PENDING_APPROVAL` (you are not a pending reviewer — NEXT_REVIEWERs get theirs after step 1), `409 ALREADY_DECIDED`, `409 ROUND_CLOSED`, `409 NO_REVIEW_ROUND` (never submitted), `409 APPROVAL_DISABLED`, `403 SELF_APPROVAL` (assignee / round requester), `403` role or token scope/autonomy.
+
+### `request_changes`
+Records CHANGES_REQUESTED on your pending approval: closes the round and moves the issue back to In Progress. The assignee fixes it and calls `request_review` again (new round).
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(required, string, ≤ 4000 chars)*: What must change
+- **Errors**: same as `approve_issue`; an empty `note` is refused before calling the API.
+
+### `reject_issue`
+Records REJECTED on your pending approval: closes the round and moves the issue to the project's Rejected status. Prefer `request_changes` when the work can be fixed.
+- **Parameters**:
+  - `identifier` *(required, string)*: e.g. `'AIPM-46'`
+  - `note` *(required, string, ≤ 4000 chars)*: Why it is rejected
+- **Errors**: same as `request_changes`.
 
 ---
 
@@ -244,24 +286,24 @@ Links a tracking issue to a wiki document/specification to establish traceabilit
 - **Returns**: `{ success: true, message: "Linked issue AIPM-46 to wiki page 'specs/quest-system'" }`
 
 ### `upload_wiki_attachment`
-Uploads an image attachment to a project wiki page using Base64 encoded file data.
+Uploads a file attachment to a project wiki page using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
   - `filename` *(required, string)*: Attachment filename (e.g. `'diagram.png'`)
   - `base64Data` *(required, string)*: Base64-encoded file data (with or without data URL prefix)
   - `contentType` *(optional, string)*: MIME type (e.g. `'image/png'`, `'image/jpeg'`)
-- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, and `url` (`/api/v1/attachments/view/:id`).
+- **Returns**: Formatted attachment object with `id`, `filename`, `file_size`, `content_type`, `url` (`/api/v1/attachments/view/:id`, the stable reference — requires auth), plus `signed_url`/`signed_url_expires_at` (short-lived public link for browsers) and `storage` (workspace usage, `warning: true` at ≥ 80%).
 
 ### `list_wiki_attachments`
-Lists all image attachments uploaded to a project wiki page.
+Lists all attachments uploaded to a project wiki page.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)
 - **Returns**: Array of wiki attachment objects.
 
 ### `delete_wiki_attachment`
-Deletes an image attachment from a project wiki page.
+Deletes an attachment from a project wiki page.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)

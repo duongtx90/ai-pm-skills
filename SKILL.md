@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.8.0
+version: 2.11.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -163,11 +163,12 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
      ```
 
 ### 🖼️ Rule 9: Image & Attachment Management (Issue & Wiki)
-- **Zero S3 / Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
+- **Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
 - **Dual-Mode Upload**: Agents can upload screenshots, architectural diagrams, and error dumps using `base64Data`:
   - **Issue Attachments**: `upload_issue_attachment(identifier, filename, base64Data, contentType)`
   - **Wiki Attachments**: `upload_wiki_attachment(projectKey, slug, filename, base64Data, contentType)`
-- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`). Agents should embed the image into the markdown body using standard markdown: `![filename](/api/v1/attachments/view/<id>)`.
+- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`, a stable reference that needs auth — the web app swaps it for a short-lived signed link when rendering). Embed images with `![filename](/api/v1/attachments/view/<id>)` and other files as links `[filename](/api/v1/attachments/view/<id>)`. Never paste `signed_url` into content (it expires in ~15 min).
+- **Allowed files (v2.9.0)**: jpg/png/gif/webp ≤ 10 MB; pdf/docx/xlsx/pptx/zip ≤ 20 MB; csv/txt. Type is detected from content; svg/html/exe are rejected. Workspace storage quota applies.
 - **Discovery & Cleanup**:
   - Issues: `list_issue_attachments(identifier)` / `delete_issue_attachment(identifier, attachmentId)`
   - Wiki: `list_wiki_attachments(projectKey, slug)` / `delete_wiki_attachment(projectKey, slug, attachmentId)`
@@ -177,18 +178,21 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 ## 3. Token Efficiency & Rules of Engagement
 
 1. **Compact Listings & Keyword Search**: Use `search_issues(query, projectKey)` or `list_issues(projectKey, query)` for fast keyword discovery across titles and descriptions (e.g. `'tinh luyện'`, `'auth'`) rather than fetching full issue contexts in bulk (~200B/issue token savings). Use `includeTags: true` to get tags directly in list results without extra round-trips.
-2. **Bulk Read Over Loops (MANDATORY)**: When needing details/status/tags for multiple issues (up to 200 items), **ALWAYS call `get_issues_batch({ identifiers: [...] })`** in a single call instead of firing iterative `get_issue_context` calls in a loop. Firing hundreds of individual requests will hit the HTTP 429 rate limit (~100 req/min).
+2. **Paginate with cursors (v2.10.0)**: list/search tools return `nextCursor` when more results exist — call again with `cursor: nextCursor` (same other arguments) instead of raising `limit`. Tool annotations mark read-only vs destructive tools; confirm with the user before destructive ones (`archive_issue`, `delete_*`, `update_issue` overwriting description/tags, `set_issue_participants`, `create_or_update_wiki_page`). Full generated reference: `references/mcp-tools.generated.md`.
+2b. **Bulk Read Over Loops (MANDATORY)**: When needing details/status/tags for multiple issues (up to 200 items), **ALWAYS call `get_issues_batch({ identifiers: [...] })`** in a single call instead of firing iterative `get_issue_context` calls in a loop. Firing hundreds of individual requests will hit the HTTP 429 rate limit (~100 req/min).
 3. **Feature & Tag Discovery**: Call `list_project_tags(projectKey)` to see all active tags and their issue counts. Call `get_daily_report(projectKey, ["by_tag"])` for feature-level progress and completion rates. Filter issues by tags using `list_issues({ projectKey, tags: ["UI"], tagMode: "AND" | "OR" })`.
 4. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
 5. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
 6. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
-7. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. If an ambiguous name is queried, HTTP 409 `AMBIGUOUS_USER_MATCH` with candidate accounts is returned to prevent misassignments.
-8. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
-9. **Task Lifecycle & Handoff Clarification**:
+7. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. An ambiguous name returns an `isError` result for HTTP 409 `AMBIGUOUS_USER_MATCH` — call `search_users` and retry with the exact email or user id.
+8. **Errors & Access (v2.8.2)**: Every tool goes through the REST API with the token owner's rights — there is no direct-DB fallback. A failed call returns `isError: true` with JSON `{ success: false, status, error, hint }`: `401` token invalid/expired → create a new agent token; `403` the token owner lacks the project role, or the token's scope (`*`, `read`, `write:KEY`) / autonomy (only `AUTONOMOUS` may write; `SUGGEST_ONLY`/`REQUIRE_APPROVAL` are read-only) does not allow it — the message says which; `404` check identifier/projectKey (`list_projects`, `search_issues`); `409` version conflict → re-read with `get_issue_context` and retry with the latest `version` (approval codes such as `APPROVAL_REQUIRED` carry their own hint, see rule 10); `429` retry later. Follow the `hint` instead of retrying blindly.
+9. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
+10. **Task Lifecycle & Handoff Clarification**:
    - **Coding Agent / Subagent**: `claim_issue` → Develop & Verify → `add_issue_comment` (Rule 6 Template) → `update_issue_status("Code Review", expectedVersion)`.
    - **Parent Orchestrator / Reviewer**: Review & QA → Git Push → Deploy (`./deploy/deploy-backend.sh`) → `update_issue_status("Done", expectedVersion)`.
    - Coding agents MUST NEVER unilaterally mark tasks `Done` before parent review and deployment.
-10. **Anti-Patterns**:
+   - **Projects with an approval policy (v2.11.0)**: moving to Done returns `409 APPROVAL_REQUIRED` until a review round is approved. Assignee/coding agent: completion comment → `request_review(identifier)` (reviewers = the issue's REVIEWER / NEXT_REVIEWER participants, never the assignee or the requester). Reviewer (you are a REVIEWER, acting as your token owner): read the work, then `approve_issue(identifier, note?)`, `request_changes(identifier, note)` (back to In Progress; the assignee fixes it and calls `request_review` again) or `reject_issue(identifier, note)`. The last required approval moves the issue to Done automatically — do not call `update_issue_status("Done")`. Check rounds and reviewer notes with `get_issue_approvals(identifier)`. Error codes (`NO_PENDING_APPROVAL`, `ALREADY_DECIDED`, `ROUND_CLOSED`, `SELF_APPROVAL`, `APPROVAL_DISABLED`) are final for that call — follow the `hint`, don't retry. See `references/api-reference.md` → "Review & approval flow".
+11. **Anti-Patterns**:
     - ❌ NEVER fire iterative `get_issue_context` calls in a loop (always use `get_issues_batch`).
     - ❌ NEVER omit `tags` when creating issues.
     - ❌ NEVER dump entire raw logs, compiler dumps, or full file diffs into comments.
