@@ -2,11 +2,11 @@
 
 # AI-PM MCP tools
 
-40 tools. Every tool result stays under 150,000 characters. List tools return `structuredContent` matching their output schema and page with an opaque `cursor`: pass the returned `nextCursor` (with the same other arguments) to get the next page; no `nextCursor` = last page.
+45 tools. Every tool result stays under 150,000 characters. List tools return `structuredContent` matching their output schema and page with an opaque `cursor`: pass the returned `nextCursor` (with the same other arguments) to get the next page; no `nextCursor` = last page.
 
 Errors come back as `isError: true` with `{ success: false, status?, error, hint }` — the `hint` says how to fix the call.
 
-## Read-only tools (17)
+## Read-only tools (18)
 
 ### `list_projects` — List projects
 
@@ -314,6 +314,15 @@ Get a consolidated daily report for a project (totals, priority/assignee breakdo
   - `projectKey` *(required, string)*: Project key prefix (e.g. 'AIPM').
   - `sections` *(optional, array of string)*: Optional subset of report sections to include (defaults to all).
 
+### `get_issue_approvals` — Get issue approvals
+
+*read-only, idempotent*
+
+Approval state of an issue: project policy, current round and its status (PENDING / APPROVED / CHANGES_REQUESTED / REJECTED), and every round (newest first) with each reviewer's decision and note.
+
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
+
 ### `list_issue_attachments` — List issue attachments
 
 *read-only, idempotent*
@@ -357,7 +366,7 @@ List all attachments for a wiki page (with a short-lived `signed_url` for each).
   - `truncated` *(optional, boolean)*: True when the page was cut to stay under the result size limit.
   - `note` *(optional, string)*: Explains a truncation.
 
-## Write tools (16)
+## Write tools (20)
 
 ### `claim_issue` — Claim issue
 
@@ -545,6 +554,45 @@ Create up to 50 issues at once in a project (1 call). Each issue may set title/s
     - `dueDate` *(optional, string)*
     - `participants` *(optional, array of string | object)*
     - `participantIds` *(optional, array of string)*
+
+### `request_review` — Request review
+
+*write*
+
+Submit an issue for review (approval flow): opens a new review round with a PENDING approval for every REVIEWER participant (two-step projects then ask the NEXT_REVIEWERs) and moves the issue to the project's review status. Only for projects with an approval policy (any / all / two_step); there, Done is reached only when the round is approved — update_issue_status to Done is refused with APPROVAL_REQUIRED. The assignee and the caller never review their own round.
+
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
+
+### `approve_issue` — Approve issue
+
+*write*
+
+Approve an issue as one of its reviewers: records APPROVED on YOUR pending approval in the open review round. When the round is complete (policy any / all / two_step) the issue moves to Done automatically. Fails with a clear code when you have no pending approval (NO_PENDING_APPROVAL), the round is closed (ROUND_CLOSED), the issue was never submitted (NO_REVIEW_ROUND), the project has no approval policy (APPROVAL_DISABLED) or you are its assignee / requester (SELF_APPROVAL).
+
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
+  - `note` *(optional, string)*: Optional comment for the assignee (max 4000 chars).
+
+### `request_changes` — Request changes
+
+*write*
+
+Request changes as one of the issue's reviewers: records CHANGES_REQUESTED (with the reason) on YOUR pending approval, closes the review round and moves the issue back to In Progress; the assignee fixes it and calls request_review again. Same error codes as approve_issue.
+
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
+  - `note` *(required, string)*: What must change (required, max 4000 chars).
+
+### `reject_issue` — Reject issue
+
+*write*
+
+Reject an issue as one of its reviewers: records REJECTED (with the reason) on YOUR pending approval, closes the review round and moves the issue to the project's Rejected status. Use request_changes instead when the work can be fixed. Same error codes as approve_issue.
+
+- **Parameters**:
+  - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
+  - `note` *(required, string)*: Why the issue is rejected (required, max 4000 chars).
 
 ### `upload_issue_attachment` — Upload issue attachment
 
