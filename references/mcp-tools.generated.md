@@ -412,7 +412,7 @@ Create a new issue in a project via REST API.
   - `milestoneId` *(optional, string)*: Milestone UUID to associate with the issue.
   - `parentId` *(optional, string)*: Parent issue UUID or identifier (e.g. 'AIPM-10').
   - `dueDate` *(optional, string)*: ISO date string for due date.
-  - `participants` *(optional, array of string | object)*: Optional list of participants to attach to the issue. Can be user names, emails, UUIDs, or objects with { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER).
+  - `participants` *(optional, array of string | object)*: Optional list of participants to attach to the issue. Can be user names, emails, UUIDs, or objects with { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER). Only a project LEAD or workspace OWNER/ADMIN may add, change or remove REVIEWER / NEXT_REVIEWER (403 otherwise).
   - `participantIds` *(optional, array of string)*: List of user UUIDs to attach as participants (default role OBSERVER).
 
 ### `update_issue_status` — Update issue status
@@ -640,7 +640,7 @@ Update fields of an issue (priority, title, description, status, assignee, tags,
   - `dueDate` *(optional, string | null)*: ISO date string for due date (null clears).
   - `expectedVersion` *(optional, number)*: Optional expected current version for OCC (409 on conflict).
   - `cost` *(optional, number)*: Optional execution cost in USD (e.g. 0.0002).
-  - `participants` *(optional, array of string | object)*: Replace the issue's participant set. Items are user names/emails/UUIDs or { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER). The assignee is kept as ASSIGNEE.
+  - `participants` *(optional, array of string | object)*: Replace the issue's participant set. Items are user names/emails/UUIDs or { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER). The assignee is kept as ASSIGNEE. Only a project LEAD or workspace OWNER/ADMIN may add, change or remove REVIEWER / NEXT_REVIEWER (403 otherwise).
   - `participantIds` *(optional, array of string)*: List of user UUIDs to set as the issue's participants (default role OBSERVER).
 
 ### `archive_issue` — Archive issue
@@ -679,7 +679,7 @@ Delete a project wiki page and its attachments via REST API.
 
 *write, destructive, idempotent*
 
-Replace an issue's participant set (assignee is always kept as ASSIGNEE). Accepts user names/emails/UUIDs or objects with role.
+Replace an issue's participant set (assignee is always kept as ASSIGNEE). Accepts user names/emails/UUIDs or objects with role. Only a project LEAD or workspace OWNER/ADMIN may add, change or remove REVIEWER / NEXT_REVIEWER (403 otherwise).
 
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').

@@ -90,7 +90,7 @@ Creates a new task/bug in a project.
   - `milestoneId` *(optional, string)*: Milestone UUID
   - `parentId` *(optional, string)*: Parent issue UUID or identifier (e.g. `'AIPM-10'`)
   - `dueDate` *(optional, string)*: ISO date string
-  - `participants` *(optional, array of strings or objects)*: List of participants to attach. Can be user names, emails, UUIDs, or `{ user?: string, userId?: string, role?: string }` (`'ASSIGNEE'` | `'REVIEWER'` | `'NEXT_REVIEWER'` | `'OBSERVER'`, default: `'OBSERVER'`). Assignee is automatically registered with role `'ASSIGNEE'`.
+  - `participants` *(optional, array of strings or objects)*: List of participants to attach. Can be user names, emails, UUIDs, or `{ user?: string, userId?: string, role?: string }` (`'ASSIGNEE'` | `'REVIEWER'` | `'NEXT_REVIEWER'` | `'OBSERVER'`, default: `'OBSERVER'`). Assignee is automatically registered with role `'ASSIGNEE'`. Only a project LEAD or workspace OWNER/ADMIN may add, change or remove `'REVIEWER'` / `'NEXT_REVIEWER'` (403 otherwise).
   - `participantIds` *(optional, array of UUID strings)*: List of user UUIDs to attach directly as participants (default role: `'OBSERVER'`).
 
 ### `create_issues`
@@ -104,7 +104,7 @@ Creates multiple issues in a batch (up to 50 issues) in a single round-trip to a
 Updates or replaces the participants list on an existing issue.
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-46'`)
-  - `participants` *(optional, array of strings or objects)*: List of user names, emails, UUIDs, or `{ user?, userId?, role? }` (`'ASSIGNEE'` | `'REVIEWER'` | `'NEXT_REVIEWER'` | `'OBSERVER'`). Assignee is automatically retained as `'ASSIGNEE'`.
+  - `participants` *(optional, array of strings or objects)*: List of user names, emails, UUIDs, or `{ user?, userId?, role? }` (`'ASSIGNEE'` | `'REVIEWER'` | `'NEXT_REVIEWER'` | `'OBSERVER'`). Assignee is automatically retained as `'ASSIGNEE'`. Only a project LEAD or workspace OWNER/ADMIN may add, change or remove `'REVIEWER'` / `'NEXT_REVIEWER'` (403 otherwise).
   - `participantIds` *(optional, array of UUIDs)*: User UUIDs to attach with default role `'OBSERVER'`.
 
 ### `list_project_statuses`
@@ -176,7 +176,7 @@ Deletes an attachment from an issue.
   - `attachmentId` *(required, string)*: UUID of attachment to delete
 
 ### Review & approval flow (v2.11.0)
-Projects with an approval policy (`any` = one REVIEWER, `all` = every REVIEWER, `two_step` = every REVIEWER then every NEXT_REVIEWER; default `none`) only reach Done through an approved review round — `update_issue_status`/`update_issue` to a Done status returns `409 APPROVAL_REQUIRED`. Reviewers are the issue's `REVIEWER` / `NEXT_REVIEWER` participants; the assignee and whoever submitted the round never review it. Agents act as their token owner and need a `write` scope + `AUTONOMOUS` autonomy for the write tools below. Errors come back as `isError` with the API code in `error` and a `hint`.
+Projects with an approval policy (`any` = one REVIEWER, `all` = every REVIEWER, `two_step` = every REVIEWER then every NEXT_REVIEWER; default `none`) only reach Done through an approved review round — `update_issue_status`/`update_issue` to a Done status returns `409 APPROVAL_REQUIRED`. Reviewers are the issue's `REVIEWER` / `NEXT_REVIEWER` participants (assigned by a project LEAD only); the assignee and whoever submitted the round never review it. Agents act as their token owner and need a `write` scope + `AUTONOMOUS` autonomy for the write tools below. Errors come back as `isError` with the API code in `error` and a `hint`.
 
 ### `request_review`
 Submits an issue for review: opens a new round (history is kept) with a PENDING approval per REVIEWER and moves the issue to the project's review (`IN_REVIEW`) status.
