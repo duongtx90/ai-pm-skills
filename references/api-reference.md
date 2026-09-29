@@ -311,3 +311,13 @@ Deletes an attachment from a project wiki page.
 - **Returns**: `{ success: true, message: "Attachment deleted" }`
 
 
+
+
+## Proposals for `REQUIRE_APPROVAL` agents (APPR-06)
+
+An agent token with autonomy `REQUIRE_APPROVAL` does not write directly. A write that the token's scopes and the owner's role would allow returns **`202 Accepted`** `{ proposed: true, actionId, status: "PROPOSED", summary, message }` and nothing is changed yet. MCP write tools return this as a normal (non-error) result: *"Đang chờ chủ token duyệt (actionId …)"*.
+
+- **Do not retry** a proposed write — the owner approves or rejects it in AI-PM (Agents → Đề xuất, or the Inbox). On approval the exact stored request is executed once (re-checked against the owner's current permissions and the token's current scopes); on rejection nothing happens.
+- A proposal expires after 7 days. At most 50 pending proposals per agent; beyond that writes return `429 PROPOSAL_LIMIT`.
+- `SUGGEST_ONLY` tokens stay read-only (403); scope- or role-denied writes are still 403 (not proposed).
+- Version conflicts at approval time end the proposal as FAILED — re-read the issue and propose again.
