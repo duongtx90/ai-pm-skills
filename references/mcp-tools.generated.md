@@ -6,6 +6,8 @@
 
 Errors come back as `isError: true` with `{ success: false, status?, error, hint }` — the `hint` says how to fix the call.
 
+Agent tokens with autonomy `REQUIRE_APPROVAL` (APPR-06): a write tool does not change anything; the API stores it as a proposal for the token owner and the tool returns (not an error) `{ proposed: true, status: "PROPOSED", actionId, summary, message, hint }`. Do not retry — the owner approves (the change is then applied once) or rejects it in AI-PM. `SUGGEST_ONLY` tokens are read-only.
+
 ## Read-only tools (18)
 
 ### `list_projects` — List projects
