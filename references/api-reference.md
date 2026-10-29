@@ -130,7 +130,8 @@ Atomically claims an issue using Optimistic Concurrency Control (OCC).
 Transitions task status and optionally records execution cost.
 - **Parameters**:
   - `identifier` *(required, string)*: e.g. `'AIPM-46'`
-  - `status` *(required, string)*: e.g. `'In Progress'`, `'Code Review'`, `'Done'`
+  - `status` *(optional, string)*: status name, e.g. `'In Progress'`, `'Code Review'`, `'Done'`. The exact name (case-insensitive) always wins; then a normalized name (`CODE_REVIEW`); then category keywords (`IN_REVIEW`, `IN_PROGRESS`) only when they match exactly one status. A name that matches several statuses or none returns 400 listing the valid statuses.
+  - `statusId` *(optional, string)*: status UUID from `list_project_statuses`; used instead of `status`. One of the two is required.
   - `expectedVersion` *(optional, number)*: OCC check
   - `cost` *(optional, number)*: Execution cost in USD (e.g. `0.0002`) to persist upon task completion
 

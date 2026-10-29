@@ -421,11 +421,12 @@ Create a new issue in a project via REST API.
 
 *write*
 
-Update the status of an issue via REST API.
+Update the status of an issue via REST API. One of 'status' (name) or 'statusId' is required. Moving an issue to Done fails with 409 SUBTASKS_OPEN while any subtask is open (close or cancel them first); reopening or adding an open subtask under a Done issue fails with 409 PARENT_DONE.
 
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
-  - `status` *(required, string)*: New status name (e.g. 'In Progress', 'Done', 'Code Review').
+  - `status` *(optional, string)*: New status name (e.g. 'In Progress', 'Done', 'Code Review').
+  - `statusId` *(optional, string)*: Status UUID from list_project_statuses; when given it is used instead of 'status'.
   - `expectedVersion` *(optional, number)*: Optional expected version for OCC.
   - `cost` *(optional, number)*: Optional execution cost in USD (e.g. 0.0002).
 
