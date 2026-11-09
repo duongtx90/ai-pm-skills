@@ -94,6 +94,7 @@ List claimable (unassigned) issues in a project, newest first. Paged: pass nextC
     - `version` *(optional, integer)*
     - `project_key` *(optional, string)*
     - `due_date` *(optional, string)*
+    - `due_at` *(optional, string | null)*
     - `tags` *(optional, array of string)*
     - `created_at` *(optional, string)*
   - `nextCursor` *(optional, string)*: Present when more results exist: pass it as `cursor` to get the next page.
@@ -119,6 +120,7 @@ List issues in compact form (no description/history) with filters (projectKey, s
   - `limit` *(optional, number, default `20`)*: Maximum issues to return (default 20, max 100).
   - `offset` *(optional, number, default `0`)*: Legacy pagination offset; prefer cursor (cursor wins when both are set).
   - `includeArchived` *(optional, boolean, default `false`)*: Include archived issues.
+  - `parentId` *(optional, string)*: Only direct subtasks of this parent issue (UUID or identifier, e.g. 'AIPM-10').
 - **Returns** (`structuredContent`, also serialized as the text content):
   - `offset` *(optional, integer)*: Offset of the first item of this page.
   - `limit` *(optional, integer)*: Requested page size.
@@ -412,8 +414,9 @@ Create a new issue in a project via REST API.
   - `tagIds` *(optional, array of string)*: List of tag UUIDs to attach.
   - `cycleId` *(optional, string)*: Cycle UUID to associate with the issue.
   - `milestoneId` *(optional, string)*: Milestone UUID to associate with the issue.
-  - `parentId` *(optional, string)*: Parent issue UUID or identifier (e.g. 'AIPM-10').
-  - `dueDate` *(optional, string)*: ISO date string for due date.
+  - `parentId` *(optional, string)*: Parent issue UUID or identifier (e.g. 'AIPM-10'). A missing, other-project or archived parent, or a too-deep tree fails with 400 INVALID_PARENT.
+  - `dueDate` *(optional, string)*: Due date: YYYY-MM-DD, or an ISO datetime with offset/Z (e.g. 2026-11-05T14:30:00+07:00) to set a time of day.
+  - `scheduledStart` *(optional, string)*: Start date (when work is planned to begin): YYYY-MM-DD or an ISO datetime. Shown as the issue's start on the board/timeline. If omitted it is set automatically when the issue first enters In Progress / In Review.
   - `participants` *(optional, array of string | object)*: Optional list of participants to attach to the issue. Can be user names, emails, UUIDs, or objects with { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER). Only a project LEAD or workspace OWNER/ADMIN may add, change or remove REVIEWER / NEXT_REVIEWER (403 otherwise).
   - `participantIds` *(optional, array of string)*: List of user UUIDs to attach as participants (default role OBSERVER).
 
@@ -554,7 +557,8 @@ Create up to 50 issues at once in a project (1 call). Each issue may set title/s
     - `tagIds` *(optional, array of string)*
     - `cycleId` *(optional, string)*
     - `milestoneId` *(optional, string)*
-    - `dueDate` *(optional, string)*
+    - `dueDate` *(optional, string)*: Due date: YYYY-MM-DD or ISO datetime with offset/Z.
+    - `scheduledStart` *(optional, string)*: Start date: YYYY-MM-DD or ISO datetime.
     - `participants` *(optional, array of string | object)*
     - `participantIds` *(optional, array of string)*
 
@@ -628,7 +632,7 @@ Upload a file attachment to a wiki page using base64 encoded data. Allowed (dete
 
 *write, destructive, idempotent*
 
-Update fields of an issue (priority, title, description, status, assignee, tags, dueDate, expectedVersion, cost) via REST API. Assignee may be a name/email/UUID, 'unassigned', or null. Tag names are auto-created in the project.
+Update fields of an issue (priority, title, description, status, assignee, tags, dueDate, scheduledStart, expectedVersion, cost) via REST API. Assignee may be a name/email/UUID, 'unassigned', or null. Tag names are auto-created in the project. Moving an issue to Done fails with 409 SUBTASKS_OPEN while any subtask is open (close or cancel them first); reopening or adding an open subtask under a Done issue fails with 409 PARENT_DONE. An invalid parentId fails with 400 INVALID_PARENT (details.reason NOT_FOUND, OTHER_PROJECT, ARCHIVED, CYCLE or DEPTH).
 
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
@@ -640,7 +644,9 @@ Update fields of an issue (priority, title, description, status, assignee, tags,
   - `assigneeId` *(optional, string | null)*: Optional assignee user UUID (or null to unassign).
   - `tags` *(optional, array of string)*: List of tag names to set (replaces the current set). Missing names are auto-created in the project.
   - `tagIds` *(optional, array of string)*: List of tag UUIDs to set (replaces the current set).
-  - `dueDate` *(optional, string | null)*: ISO date string for due date (null clears).
+  - `dueDate` *(optional, string | null)*: Due date: YYYY-MM-DD, or an ISO datetime with offset/Z to set a time of day (null clears).
+  - `scheduledStart` *(optional, string | null)*: Start date: YYYY-MM-DD or an ISO datetime (null clears).
+  - `parentId` *(optional, string | null)*: Parent issue UUID or identifier (e.g. 'AIPM-10') to make this a subtask; null removes the parent. Same project only, at most 5 levels. A missing, other-project or archived parent, a cycle or a too-deep tree fails with 400 INVALID_PARENT.
   - `expectedVersion` *(optional, number)*: Optional expected current version for OCC (409 on conflict).
   - `cost` *(optional, number)*: Optional execution cost in USD (e.g. 0.0002).
   - `participants` *(optional, array of string | object)*: Replace the issue's participant set. Items are user names/emails/UUIDs or { user, userId, role } (roles: ASSIGNEE, REVIEWER, NEXT_REVIEWER, OBSERVER). The assignee is kept as ASSIGNEE. Only a project LEAD or workspace OWNER/ADMIN may add, change or remove REVIEWER / NEXT_REVIEWER (403 otherwise).

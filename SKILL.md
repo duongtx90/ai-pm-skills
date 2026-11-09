@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.12.1
+version: 2.12.2
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -148,7 +148,9 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
        "projectKey": "AIPM",
        "title": "Add webhook retry mechanism",
        "tags": ["backend", "api"],
-       "description": "..."
+       "description": "...",
+       "scheduledStart": "2026-11-10",
+       "dueDate": "2026-11-20"
      }
      ```
    - `create_issues` (Batch):
@@ -184,6 +186,7 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 4. **Pre-computed Reporting**: Use `get_daily_report` for project summaries, stale WIP detection, and velocity tracking.
 5. **Batch Creation Over Loops**: Use `create_issues` for bulk creation (up to 50 tasks). The MCP client automatically handles HTTP 429 retries with exponential backoff if limits are reached.
 6. **Auto-Assign Token Owner & Participants**: Omitting `assignee` in `create_issue` automatically assigns the issue to the human user who owns the agent token. Use `participants` in `create_issue` or `set_issue_participants` directly to assign reviewers/observers in a single call.
+   - **Start & Due Dates (v2.12.2)**: When the user gives a start date / time range, pass `scheduledStart` (YYYY-MM-DD or ISO datetime) and `dueDate` on `create_issue`, each item of `create_issues`, or `update_issue` (`null` clears). If `scheduledStart` is omitted the issue has no start date until it first enters In Progress / In Review, when the server sets it to now.
 7. **Safe Assignee Resolution**: Assignees and participants prioritize exact match. An ambiguous name returns an `isError` result for HTTP 409 `AMBIGUOUS_USER_MATCH` — call `search_users` and retry with the exact email or user id.
 8. **Errors & Access (v2.8.2)**: Every tool goes through the REST API with the token owner's rights — there is no direct-DB fallback. A failed call returns `isError: true` with JSON `{ success: false, status, error, hint }`: `401` token invalid/expired → create a new agent token; `403` the token owner lacks the project role, or the token's scope (`*`, `read`, `write:KEY`) / autonomy (only `AUTONOMOUS` may write; `SUGGEST_ONLY`/`REQUIRE_APPROVAL` are read-only) does not allow it — the message says which; `404` check identifier/projectKey (`list_projects`, `search_issues`); `409` version conflict → re-read with `get_issue_context` and retry with the latest `version` (approval codes such as `APPROVAL_REQUIRED` carry their own hint, see rule 10); `429` retry later. Follow the `hint` instead of retrying blindly.
 9. **Semantic Tag Colors**: Auto-created tag colors match semantics: `bug`/`critical` (Red), `ui`/`frontend` (Blue), `backend`/`api` (Purple), `docs` (Amber), `ai`/`mcp` (Cyan).
