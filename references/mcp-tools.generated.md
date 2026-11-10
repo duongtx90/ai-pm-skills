@@ -93,6 +93,7 @@ List claimable (unassigned) issues in a project, newest first. Paged: pass nextC
     - `assignee` *(optional, string)*
     - `version` *(optional, integer)*
     - `project_key` *(optional, string)*
+    - `url` *(optional, string)*: Absolute web link of the issue — use it as-is, never build issue links yourself.
     - `due_date` *(optional, string)*
     - `due_at` *(optional, string | null)*
     - `tags` *(optional, array of string)*
@@ -132,6 +133,7 @@ List issues in compact form (no description/history) with filters (projectKey, s
     - `status` *(optional, string)*
     - `assignee` *(optional, string)*
     - `project_key` *(optional, string)*
+    - `url` *(optional, string)*: Absolute web link of the issue — use it as-is, never build issue links yourself.
     - `is_archived` *(optional, boolean)*
     - `version` *(optional, integer)*
     - `created_at` *(optional, string)*
@@ -167,6 +169,7 @@ Search issues across title and description by keyword/phrase (e.g. tinh luyện,
     - `status` *(optional, string)*
     - `assignee` *(optional, string)*
     - `project_key` *(optional, string)*
+    - `url` *(optional, string)*: Absolute web link of the issue — use it as-is, never build issue links yourself.
     - `is_archived` *(optional, boolean)*
     - `version` *(optional, integer)*
     - `created_at` *(optional, string)*
@@ -197,6 +200,7 @@ Read multiple issues in a single batch call (up to 200 issues) with status, assi
     - `status` *(optional, object)*: { id, name, category }
     - `assignee` *(optional, object)*: { id, name, email? }
     - `project_key` *(optional, string)*
+    - `url` *(optional, string)*: Absolute web link of the issue — use it as-is, never build issue links yourself.
     - `tags` *(optional, array of object)*
     - `participants` *(optional, array of object)*
     - `version` *(optional, integer)*

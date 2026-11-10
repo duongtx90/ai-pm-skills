@@ -2,6 +2,8 @@
 
 > **Complete, always-current tool list:** [`mcp-tools.generated.md`](./mcp-tools.generated.md) — generated from the backend `TOOL_DEFINITIONS` (`pnpm docs:mcp`), including titles, read-only/destructive annotations, input and output schemas. This file is the curated guide; when they disagree, the generated file wins.
 >
+> **Since v2.13.0:** every issue object returned by the tools has `url` — the absolute web link of the issue in its own workspace (`<web>/w/<workspace>/p/<KEY>/i/<ID>`). Link issues with it as-is; never build issue URLs yourself.
+>
 > **Since v2.10.0:** list tools (`list_*`, `search_*`, `get_issues_batch`) return `structuredContent` and page with an opaque `cursor` → pass back `nextCursor` (same other arguments) until it is absent; `list_issues` still accepts `offset`. Every result stays under 150,000 characters (`truncated: true` + `note` when a page was cut). `search_issues` with a blank `query` is an error.
 
 
@@ -24,7 +26,7 @@ Bulk issue reader (AIPM-71) fetching up to 200 issues in a single request. Retur
 - **Parameters**:
   - `identifiers` *(required, array of strings)*: Array of issue identifiers (e.g. `["AIPM-69", "AIPM-70"]`, max 200)
   - `fields` *(optional, array of strings)*: Subset of fields to retrieve (e.g. `["description", "tags"]`). If omitted, returns all standard fields.
-- **Returns**: `{ count: number, issues: Array<{ id, identifier, number, title, description?, priority, status, assignee, project_key, tags, participants, is_archived, version, created_at, updated_at }> }`
+- **Returns**: `{ count: number, issues: Array<{ id, identifier, number, title, description?, priority, status, assignee, project_key, tags, participants, url, is_archived, version, created_at, updated_at }> }`
 
 ### `list_project_tags`
 Lists all tags associated with a project along with the total issue count for each tag (AIPM-73). Used for feature discovery and progress overview without scanning all issues.
@@ -34,6 +36,7 @@ Lists all tags associated with a project along with the total issue count for ea
 
 ### `list_issues`
 Returns a compact, token-efficient issue list (~200 bytes per issue, omitting descriptions and histories) with multi-criteria filtering and pagination.
+- **Each item**: `{ identifier, title, priority, status, assignee, project_key, url, is_archived, version, created_at, updated_at, tags? }` — `url` is the issue's absolute web link.
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `query` *(optional, string)*: Keyword or phrase to search across issue titles and descriptions
@@ -114,7 +117,7 @@ Lists all workflow statuses available in a project without needing to guess stat
 - **Returns**: Array of workflow statuses with `id`, `name`, `category` (`BACKLOG`, `TODO`, `IN_PROGRESS`, `IN_REVIEW`, `DONE`, `CANCELED`, `REJECTED`), `position`, `is_default`.
 
 ### `get_issue_context`
-Fetches technical context for a specific issue (description, comments, sub-tasks, attachments).
+Fetches technical context for a specific issue (description, comments, sub-tasks, attachments). The payload includes `url` (absolute web link of the issue).
 - **Parameters**:
   - `identifier` *(required, string)*: e.g. `'AIPM-46'`
   - `maxTokens` *(optional, number)*: Context budget (default: 4000)

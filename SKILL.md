@@ -1,7 +1,7 @@
 ---
 name: ai-pm-skills
 description: "Project management & task tracking skill for workspaces explicitly bound to AI-PM via .aipm/config.json or when explicitly requested by the user. Do NOT activate for general coding tasks in unlinked workspaces."
-version: 2.12.2
+version: 2.13.0
 ---
 
 # AI-PM Agent Skill & Onboarding Guide
@@ -174,6 +174,12 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
 - **Discovery & Cleanup**:
   - Issues: `list_issue_attachments(identifier)` / `delete_issue_attachment(identifier, attachmentId)`
   - Wiki: `list_wiki_attachments(projectKey, slug)` / `delete_wiki_attachment(projectKey, slug, attachmentId)`
+
+### 🔗 Rule 10: Issue Links — Use `url`, Never Build Them (v2.13.0)
+- Every issue returned by the MCP tools (`list_issues`, `search_issues`, `list_claimable_issues`, `get_issues_batch`, `get_issue_context`, `create_issue(s)`, `update_issue*`, `claim_issue`) carries **`url`**: the absolute web link of that issue in its own workspace (e.g. `https://aipm.io.vn/w/<workspace>/p/AIPM/i/AIPM-12`).
+- When you mention an issue to the user, in a comment, report or commit message, link it as `[AIPM-12](<url>)` with the `url` **exactly as returned**.
+- **Never** assemble issue links yourself: do not guess the web domain, the workspace segment or the route, and never use the MCP/API host (`/api/v1/...`) as an issue link.
+- If a payload has no `url` (older server), call `get_issue_context(identifier)` once to get it; if still absent, write the plain identifier without a link.
 
 ---
 
