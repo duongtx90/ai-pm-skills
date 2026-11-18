@@ -441,11 +441,11 @@ Update the status of an issue via REST API. One of 'status' (name) or 'statusId'
 
 *write, idempotent*
 
-Assign an issue to a user (by name or email) via REST API. Agents act through user tokens — issues are always assigned to a person.
+Assign an issue to a user (by name or email) via REST API. Pass 'assignee' (or 'assigneeId'). Agents act through user tokens — issues are always assigned to a person.
 
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. 'AIPM-46').
-  - `assignee` *(required, string)*: User name or email (case-insensitive). Preferred over assigneeId — the server resolves it among the issue's project members. Use search_users first if unsure.
+  - `assignee` *(optional, string)*: User name or email (case-insensitive). Preferred over assigneeId — the server resolves it among the issue's project members. Use search_users first if unsure.
   - `assigneeId` *(optional, string)*: Optional fallback: assignee user UUID.
 
 ### `add_issue_comment` — Add issue comment

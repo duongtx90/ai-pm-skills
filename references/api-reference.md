@@ -143,7 +143,7 @@ Assigns an issue to a user by name or email.
 > 🛡️ **Safe Resolution Note**: Prioritizes exact email/name match. If an ambiguous name is queried that matches multiple team members (e.g. `"Tùng"` matching `"Tùng"` and `"Tùng Anh"`), the system returns HTTP `409 AMBIGUOUS_USER_MATCH` with candidates list rather than guessing incorrectly.
 - **Parameters**:
   - `identifier` *(required, string)*: e.g. `'AIPM-46'`
-  - `assignee` *(required, string)*: User name, email, or UUID
+  - `assignee` *(string)*: User name, email, or UUID (or `assigneeId`)
 
 ### `add_issue_comment`
 Posts progress or verification notes on an issue.
