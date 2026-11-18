@@ -1,0 +1,11 @@
+{
+  "name": "ai-pm",
+  "owner": { "name": "duongtx90" },
+  "plugins": [
+    {
+      "name": "ai-pm",
+      "source": "./",
+      "description": "AI-PM skill + remote MCP server for issue tracking from coding agents."
+    }
+  ]
+}

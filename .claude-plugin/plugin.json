@@ -1,0 +1,22 @@
+{
+  "name": "ai-pm",
+  "description": "AI-PM project management: the ai-pm skill plus the AI-PM remote MCP server (issues, cycles, wiki, reviews).",
+  "author": { "name": "duongtx90" },
+  "homepage": "https://github.com/duongtx90/ai-pm-skills",
+  "userConfig": {
+    "aipm_token": {
+      "type": "string",
+      "title": "AI-PM agent token",
+      "description": "Agent token (ag_live_...) created in AI-PM → Agents. Stored in the system credential store.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "mcpServers": {
+    "ai-pm": {
+      "type": "http",
+      "url": "https://prj-api.brewmonster.vn/api/v1/mcp",
+      "headers": { "Authorization": "Bearer ${user_config.aipm_token}" }
+    }
+  }
+}
