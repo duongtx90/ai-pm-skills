@@ -1,6 +1,7 @@
 #!/bin/sh
 # AI-PM installer: the ai-pm skill + the AI-PM MCP server for every coding
-# agent found on this machine (Claude Code, Codex, Antigravity, Reasonix).
+# agent found on this machine (Claude Code, Codex, Antigravity, Reasonix,
+# OpenClaw).
 #
 #   sh install.sh        install / update, re-runnable (reads AIPM_TOKEN)
 #   sh install.sh --uninstall
@@ -16,6 +17,7 @@ NAME=ai-pm-mcp
 MCP_URL=${AIPM_MCP_URL:-https://prj-api.brewmonster.vn/api/v1/mcp}
 CODEX_HOME=${CODEX_HOME:-$HOME/.codex}
 REASONIX_HOME=${REASONIX_HOME:-$HOME/.reasonix}
+OPENCLAW_HOME=$HOME/.openclaw
 GEMINI=$HOME/.gemini
 BACKUP=$HOME/.aipm/backup/$(date +%Y%m%d-%H%M%S)
 TOKEN=${AIPM_TOKEN:-}
@@ -35,6 +37,7 @@ CANON=$HOME/.agents/skills/$SKILL   # the one real copy (npx skills)
 AGENTS=""                           # agents npx skills links itself
 if has codex || [ -d "$CODEX_HOME" ]; then AGENTS="$AGENTS codex"; fi
 if has reasonix || [ -d "$REASONIX_HOME" ]; then AGENTS="$AGENTS reasonix"; fi
+if has openclaw || [ -d "$OPENCLAW_HOME" ]; then AGENTS="$AGENTS openclaw"; fi
 # npx skills treats Antigravity as "universal" and never links its global
 # skills dir, so those links are made here.
 LINK_DIRS=""
@@ -108,6 +111,7 @@ if [ "$MODE" = uninstall ]; then
   fi
   if has codex && codex mcp get "$NAME" >/dev/null 2>&1; then codex mcp remove "$NAME" >/dev/null && say "codex: MCP $NAME removed"; fi
   if has reasonix && reasonix mcp get "$NAME" >/dev/null 2>&1; then reasonix mcp remove "$NAME" >/dev/null && say "reasonix: MCP $NAME removed"; fi
+  if has openclaw && openclaw mcp show "$NAME" >/dev/null 2>&1; then openclaw mcp unset "$NAME" >/dev/null && say "openclaw: MCP $NAME removed"; fi
   for f in $(gemini_configs); do
     [ -f "$f" ] && [ "$(gemini_json remove "$f")" = removed ] && say "antigravity: MCP $NAME removed from $f"
   done
@@ -120,16 +124,18 @@ if [ -n "$AGENTS$LINK_DIRS" ]; then
   has npx || { echo "npx (Node.js) is required to install the skill." >&2; exit 1; }
   # Hand-copied old versions are real folders that would shadow the link:
   # move them out of the agents' skill dirs first.
-  for d in "$REASONIX_HOME/skills" $LINK_DIRS; do
+  for d in "$REASONIX_HOME/skills" "$OPENCLAW_HOME/skills" $LINK_DIRS; do
     if [ -d "$d/$SKILL" ] && [ ! -L "$d/$SKILL" ]; then
       b=$BACKUP/$(echo "${d#"$HOME"/}" | tr / _)
       mkdir -p "$b" && mv "$d/$SKILL" "$b/" && say "old copy $d/$SKILL moved to $b/"
     fi
   done
-  agent_args=""
-  for a in $AGENTS; do agent_args="$agent_args -a $a"; done
+  # Always pass a "universal" agent (codex = ~/.agents/skills): with only
+  # non-universal agents npx skills copies instead of linking.
+  agent_args="-a codex"
+  for a in $AGENTS; do [ "$a" = codex ] || agent_args="$agent_args -a $a"; done
   # shellcheck disable=SC2086
-  npx -y skills add "$REPO" -g -y ${agent_args:--a codex} >/dev/null
+  npx -y skills add "$REPO" -g -y $agent_args >/dev/null
   for d in $LINK_DIRS; do
     mkdir -p "$d" && ln -sfn "$CANON" "$d/$SKILL"
   done
@@ -180,6 +186,21 @@ if has reasonix; then
       say "reasonix: MCP $NAME added"
     else
       say "reasonix: MCP not added (see error above)"
+    fi
+  fi
+fi
+
+if has openclaw; then
+  if grep -qs "$MCP_URL" "$OPENCLAW_HOME/openclaw.json"; then
+    say "openclaw: MCP already configured, left unchanged"
+  elif [ -z "$TOKEN" ]; then
+    need_token openclaw
+  else
+    # OpenClaw probes the server before saving: a wrong token fails here.
+    if openclaw mcp add "$NAME" --url "$MCP_URL" --transport streamable-http --header "Authorization=Bearer $TOKEN" >/dev/null; then
+      say "openclaw: MCP $NAME added"
+    else
+      say "openclaw: MCP not added (see error above)"
     fi
   fi
 fi

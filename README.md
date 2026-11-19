@@ -1,6 +1,6 @@
 # ai-pm-skills
 
-AI-PM skill (`SKILL.md` + `references/`) and the AI-PM remote MCP server, packaged for Claude Code, Codex, Antigravity and Reasonix.
+AI-PM skill (`SKILL.md` + `references/`) and the AI-PM remote MCP server, packaged for Claude Code, Codex, Antigravity, Reasonix and OpenClaw.
 
 ## Claude Code
 
@@ -13,7 +13,7 @@ Claude Code asks for your agent token (`ag_live_...`, created in AI-PM → Agent
 
 If you added the MCP server by hand before (`ai-pm-mcp` in `.mcp.json` or `claude mcp add`), remove it so the tools are not listed twice.
 
-## All agents (Claude Code, Codex, Antigravity, Reasonix)
+## All agents (Claude Code, Codex, Antigravity, Reasonix, OpenClaw)
 
 Put `export AIPM_TOKEN=ag_live_...` in your shell profile (Codex reads it at run time), open a new terminal, then:
 
