@@ -1,11 +1,18 @@
 {
   "name": "ai-pm",
-  "owner": { "name": "duongtx90" },
+  "owner": {
+    "name": "duongtx90"
+  },
   "plugins": [
     {
       "name": "ai-pm",
       "source": "./",
       "description": "AI-PM skill + remote MCP server for issue tracking from coding agents."
+    },
+    {
+      "name": "aipm-tasks",
+      "source": "./plugins/aipm-tasks",
+      "description": "Sidebar of AI-PM tasks beside the chat in Claude Code (desktop app and terminal)."
     }
   ]
 }

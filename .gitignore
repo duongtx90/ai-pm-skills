@@ -1,1 +1,3 @@
 .DS_Store
+# Types Claude Code writes for plugin development
+plugins/*/.claude-plugin/types/

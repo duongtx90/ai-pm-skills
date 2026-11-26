@@ -1,0 +1,47 @@
+{
+  "name": "aipm-tasks",
+  "version": "0.2.0",
+  "description": "Sidebar of the AI-PM project's tasks beside the chat: status tabs, task detail with comments, /aipm to reopen.",
+  "author": {
+    "name": "duongtx90"
+  },
+  "homepage": "https://github.com/duongtx90/ai-pm-skills",
+  "types": "./types/index.d.ts",
+  "network": {
+    "hosts": [
+      "prj-api.brewmonster.vn"
+    ]
+  },
+  "userConfig": {
+    "token": {
+      "type": "string",
+      "title": "AIPM token",
+      "description": "AI-PM agent token (ag_live_..., AI-PM → Agents). Empty: uses the AIPM_TOKEN environment variable.",
+      "sensitive": true
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "title": "API base URL",
+      "description": "AIPM REST API base, ending in /api/v1",
+      "default": "https://prj-api.brewmonster.vn/api/v1"
+    },
+    "projectKey": {
+      "type": "string",
+      "title": "Project key",
+      "description": "e.g. AIPM. Empty: read projectKey from .aipm/config.json in the session's folder",
+      "default": ""
+    },
+    "orgId": {
+      "type": "string",
+      "title": "Workspace (org) id",
+      "description": "Optional x-org-id header; empty uses the token's own workspace",
+      "default": ""
+    },
+    "refreshSeconds": {
+      "type": "number",
+      "title": "Refresh every (seconds)",
+      "description": "How often the sidebar reloads the list; 0 turns auto refresh off",
+      "default": 60
+    }
+  }
+}

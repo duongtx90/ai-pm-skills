@@ -13,6 +13,14 @@ Claude Code asks for your agent token (`ag_live_...`, created in AI-PM → Agent
 
 If you added the MCP server by hand before (`ai-pm-mcp` in `.mcp.json` or `claude mcp add`), remove it so the tools are not listed twice.
 
+### Task sidebar (optional)
+
+```text
+/plugin install aipm-tasks@ai-pm
+```
+
+A sidebar beside the chat with the project's tasks by status, task detail and comments; `/aipm` reopens and reloads it. The project comes from `.aipm/config.json` (or the plugin's `projectKey` option); the token from the install screen, else `AIPM_TOKEN`. In the desktop app: + next to the prompt box → Plugins → Add plugin.
+
 ## All agents (Claude Code, Codex, Antigravity, Reasonix, OpenClaw)
 
 Put `export AIPM_TOKEN=ag_live_...` in your shell profile (Codex reads it at run time), open a new terminal, then:
