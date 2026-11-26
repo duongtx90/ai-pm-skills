@@ -1,7 +1,7 @@
 {
   "name": "aipm-tasks",
-  "version": "0.2.0",
-  "description": "Sidebar of the AI-PM project's tasks beside the chat: status tabs, task detail with comments, /aipm to reopen.",
+  "version": "0.2.1",
+  "description": "Sidebar of the AI-PM project's tasks beside the chat: status tabs, task detail with comments. Opens only in repos with .aipm/config.json; /aipm shows or hides it.",
   "author": {
     "name": "duongtx90"
   },

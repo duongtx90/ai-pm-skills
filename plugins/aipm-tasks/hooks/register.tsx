@@ -332,13 +332,15 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'aipm',
-      description: 'Open the AIPM tasks sidebar and reload it',
+      description: 'Show or hide the AIPM tasks sidebar',
     })
+    timer?.cancel()
+    timer = undefined
+    // Repos not bound to AIPM get no sidebar and no polling; /aipm still works there.
+    if (!(await resolveProjectKey($, opts))) return next(e)
     // Seated small on the desktop app from the start, one click from full size.
     void $.ui.open({ id: PANE, title: TITLE, placement: 'widget' })
     void refresh($, opts)
-    timer?.cancel()
-    timer = undefined
     if (opts.refreshSeconds > 0) {
       timer = $.clock.every(Math.max(15, opts.refreshSeconds) * 1000, () => void refresh($, opts))
     }
@@ -347,6 +349,10 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'aipm' }, async $ => {
+    if ((await $.ui.panes()).some(p => p.id === PANE && p.isShown)) {
+      await $.ui.close({ id: PANE })
+      return { text: 'AIPM: đã ẩn sidebar (gõ /aipm để mở lại).' }
+    }
     await $.ui.open({ id: PANE, title: TITLE })
     await refresh($, opts)
     const b = await read($, board)
@@ -457,7 +463,10 @@ export const register: Register = (on, options) => {
               {updated}
             </Text>
           </Box>
-          <Button key="refresh" variant="secondary" label="Làm mới" onPress={() => refresh($, opts)} />
+          <Box flexDirection="row" gap="xs">
+            <Button key="refresh" variant="secondary" label="Làm mới" onPress={() => refresh($, opts)} />
+            <Button key="hide" variant="secondary" role="dismiss" label="Ẩn" onPress={() => $.ui.close({ id: PANE })} />
+          </Box>
         </Box>
 
         {b.issues.length > 0 && (

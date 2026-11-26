@@ -19,7 +19,7 @@ If you added the MCP server by hand before (`ai-pm-mcp` in `.mcp.json` or `claud
 /plugin install aipm-tasks@ai-pm
 ```
 
-A sidebar beside the chat with the project's tasks by status, task detail and comments; `/aipm` reopens and reloads it. The project comes from `.aipm/config.json` (or the plugin's `projectKey` option); the token from the install screen, else `AIPM_TOKEN`. In the desktop app: + next to the prompt box → Plugins → Add plugin.
+A sidebar beside the chat with the project's tasks by status, task detail and comments; `/aipm` shows or hides it. It opens by itself only in repos with `.aipm/config.json`. The project comes from `.aipm/config.json` (or the plugin's `projectKey` option); the token from the install screen, else `AIPM_TOKEN`. In the desktop app: + next to the prompt box → Plugins → Add plugin.
 
 ## All agents (Claude Code, Codex, Antigravity, Reasonix, OpenClaw)
 

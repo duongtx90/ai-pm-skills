@@ -54,6 +54,7 @@ type Seen = { urls: string[]; auth?: string }
 function engine(on: On, seen: Seen, issues: (offset: string) => Reply) {
   on('command.register', () => ({ value: { command: 'aipm' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.panes', () => ({ value: [] }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   // The session sits in a subfolder; the config is at the repo's top.
   on('session.root', () => ({ value: '/repo/apps/backend' }))
@@ -167,4 +168,42 @@ test('pressing a task opens its detail, back returns to the list', { options: { 
   expect(await ui.find({ type: 'Text', text: /Lan ·/ })).toBeFalsy()
   expect(await ui.find({ type: 'Text', text: /Plan it/ })).toBeTruthy()
   await ui.unmount()
+})
+
+test('a repo without an AIPM project gets no sidebar and no API calls', { options: { token: 'tok' } }, async ($, on) => {
+  const opened: string[] = []
+  const fetched: string[] = []
+  on('command.register', () => ({ value: { command: 'aipm' } }))
+  on('ui.open', (_, e) => {
+    opened.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  on('session.root', () => ({ value: '/other' }))
+  on('session.cwd', () => ({ value: '/other' }))
+  on('fs.read', () => {
+    throw new Error('ENOENT')
+  })
+  on('http.fetch', (_, e) => {
+    fetched.push(e.url)
+    return { value: { status: 500, ok: false, headers: {}, text: '' } }
+  })
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+
+  await $.session.start({ cwd: '/other', surface: 'desktop', isInteractive: true })
+  expect(opened).toEqual([])
+  expect(fetched).toEqual([])
+})
+
+test('/aipm hides the sidebar when it is shown', { options: { token: 'tok' } }, async ($, on) => {
+  const closed: string[] = []
+  on('command.register', () => ({ value: { command: 'aipm' } }))
+  on('ui.panes', () => ({ value: [{ id: 'aipm-tasks', title: 'AIPM tasks', isShown: true, isFocused: false, isPlaced: true }] }))
+  on('ui.close', (_, e) => {
+    closed.push(e.id)
+    return { value: undefined }
+  })
+
+  const out = await $.command.run(RUN)
+  expect(closed).toEqual(['aipm-tasks'])
+  expect(JSON.stringify(out)).toContain('đã ẩn')
 })
