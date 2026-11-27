@@ -356,23 +356,21 @@ export const register: Register = (on, options) => {
     // Nothing to say in a repo without AIPM, or while a survey owns the band.
     if (e.props.hasSurvey || b.phase === 'idle') return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
-    const cols = columns(b)
-    const open = cols.filter(c => !c.isClosed)
-    const openCount = open.reduce((n, c) => n + c.issues.length, 0)
-    const busy = open.filter(c => c.issues.length > 0).map(c => `${c.name} ${c.issues.length}`)
+    const category = new Map(b.statuses.map(s => [s.name, s.category]))
+    const count = (cat: string) => b.issues.filter(i => category.get(i.status ?? '') === cat).length
     const summary =
       b.phase === 'error'
         ? b.error
         : b.phase === 'loading' && b.fetchedAt === 0
           ? 'đang tải…'
-          : `${openCount} đang mở${busy.length ? ` · ${busy.join(' · ')}` : ''}`
+          : `Todo: ${count('TODO')}   Doing: ${count('IN_PROGRESS')}   Backlog: ${count('BACKLOG')}`
 
     return (
       <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap="sm">
         <Box flexDirection="row" alignItems="center" gap="sm" flexShrink={1}>
           <Text color={b.phase === 'error' ? 'error' : 'success'}>●</Text>
           <Text weight="semibold">{b.projectKey || 'AIPM'}</Text>
-          <Text dimColor color={b.phase === 'error' ? 'error' : undefined} maxLines={1} wrap="truncate-end">
+          <Text tabular dimColor={b.phase !== 'ok'} color={b.phase === 'error' ? 'error' : undefined} maxLines={1} wrap="truncate-end">
             {summary}
           </Text>
         </Box>
@@ -380,13 +378,13 @@ export const register: Register = (on, options) => {
           <Button
             key="tasks"
             plain
-            label="Tasks"
+            label="Board"
             onPress={async () => {
               if (await isPaneShown($)) await $.ui.close({ id: PANE })
               else await $.ui.open({ id: PANE, title: TITLE })
             }}
           />
-          <Button key="band-refresh" plain label="Làm mới" onPress={() => refresh($, opts)} />
+          <Button key="band-refresh" plain label="Refresh" onPress={() => refresh($, opts)} />
         </Box>
       </Box>
     )

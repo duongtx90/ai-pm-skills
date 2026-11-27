@@ -250,7 +250,7 @@ test('session start fills the band and opens no sidebar; Tasks opens it', { opti
 
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await ui.find({ type: 'Text', text: /2 đang mở · Backlog 1 · In Progress 1/ })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /Todo: 0 +Doing: 1 +Backlog: 1/ })).toBeTruthy()
     await ui.unmount()
   }
 

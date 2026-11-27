@@ -1,6 +1,6 @@
 {
   "name": "aipm-tasks",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AI-PM tasks in Claude Code: a band above the prompt with open-task counts, and a sidebar with status tabs and task detail. Only in repos with .aipm/config.json; /aipm or the band's Tasks button shows or hides the sidebar.",
   "author": {
     "name": "duongtx90"
