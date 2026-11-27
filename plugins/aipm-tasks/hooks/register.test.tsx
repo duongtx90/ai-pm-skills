@@ -203,7 +203,59 @@ test('/aipm hides the sidebar when it is shown', { options: { token: 'tok' } }, 
     return { value: undefined }
   })
 
+
   const out = await $.command.run(RUN)
   expect(closed).toEqual(['aipm-tasks'])
   expect(JSON.stringify(out)).toContain('đã ẩn')
+})
+
+const BAND = {
+  plugin: 'aipm-tasks',
+  component: 'AbovePrompt',
+  props: {
+    hasSurvey: false,
+    isCollapsed: false,
+    isWorking: false,
+    maxRows: 3,
+    bodyColumns: 100,
+    scroll: { offset: 0, bodyRows: 3 },
+    view: {},
+  },
+} as const
+
+test('session start fills the band and opens no sidebar; Tasks opens it', { options: { token: 'tok' } }, async ($, on) => {
+  const opened: string[] = []
+  on('command.register', () => ({ value: { command: 'aipm' } }))
+  on('ui.open', (_, e) => {
+    opened.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  on('ui.panes', () => ({ value: [] }))
+  on('session.root', () => ({ value: '/repo' }))
+  on('session.cwd', () => ({ value: '/repo' }))
+  on('fs.read', () => ({ value: JSON.stringify({ projectKey: 'aipm' }) }))
+  on('env.get', () => ({ value: undefined }))
+  on('http.fetch', (_, e) => ({
+    value: {
+      status: 200,
+      ok: true,
+      headers: {},
+      text: e.url.endsWith('/statuses') ? JSON.stringify(STATUSES) : JSON.stringify({ issues: ISSUES }),
+    },
+  }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+
+  await $.session.start({ cwd: '/repo', surface: 'desktop', isInteractive: true })
+  expect(opened).toEqual([])
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...BAND, surface })
+    expect(await ui.find({ type: 'Text', text: /2 đang mở · Backlog 1 · In Progress 1/ })).toBeTruthy()
+    await ui.unmount()
+  }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'tasks' })
+  expect(opened).toEqual(['aipm-tasks'])
+  await ui.unmount()
 })

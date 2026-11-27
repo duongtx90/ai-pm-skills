@@ -324,6 +324,10 @@ function clockTime(ms: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+async function isPaneShown($: EngineInterface): Promise<boolean> {
+  return (await $.ui.panes()).some(p => p.id === PANE && p.isShown)
+}
+
 export const register: Register = (on, options) => {
   const opts = readOptions(options)
   // session.start runs again on /clear and resume: keep one timer, not one per start.
@@ -336,10 +340,9 @@ export const register: Register = (on, options) => {
     })
     timer?.cancel()
     timer = undefined
-    // Repos not bound to AIPM get no sidebar and no polling; /aipm still works there.
+    // Repos not bound to AIPM get no band and no polling; /aipm still works there.
     if (!(await resolveProjectKey($, opts))) return next(e)
-    // Seated small on the desktop app from the start, one click from full size.
-    void $.ui.open({ id: PANE, title: TITLE, placement: 'widget' })
+    // The band above the prompt shows the counts; the sidebar opens only when asked.
     void refresh($, opts)
     if (opts.refreshSeconds > 0) {
       timer = $.clock.every(Math.max(15, opts.refreshSeconds) * 1000, () => void refresh($, opts))
@@ -348,8 +351,49 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const b = await read($, board)
+    // Nothing to say in a repo without AIPM, or while a survey owns the band.
+    if (e.props.hasSurvey || b.phase === 'idle') return next(e)
+    const { Box, Text, Button } = $.ui.resolve(e)
+    const cols = columns(b)
+    const open = cols.filter(c => !c.isClosed)
+    const openCount = open.reduce((n, c) => n + c.issues.length, 0)
+    const busy = open.filter(c => c.issues.length > 0).map(c => `${c.name} ${c.issues.length}`)
+    const summary =
+      b.phase === 'error'
+        ? b.error
+        : b.phase === 'loading' && b.fetchedAt === 0
+          ? 'đang tải…'
+          : `${openCount} đang mở${busy.length ? ` · ${busy.join(' · ')}` : ''}`
+
+    return (
+      <Box flexDirection="row" justifyContent="space-between" alignItems="center" gap="sm">
+        <Box flexDirection="row" alignItems="center" gap="sm" flexShrink={1}>
+          <Text color={b.phase === 'error' ? 'error' : 'success'}>●</Text>
+          <Text weight="semibold">{b.projectKey || 'AIPM'}</Text>
+          <Text dimColor color={b.phase === 'error' ? 'error' : undefined} maxLines={1} wrap="truncate-end">
+            {summary}
+          </Text>
+        </Box>
+        <Box flexDirection="row" gap="xs">
+          <Button
+            key="tasks"
+            plain
+            label="Tasks"
+            onPress={async () => {
+              if (await isPaneShown($)) await $.ui.close({ id: PANE })
+              else await $.ui.open({ id: PANE, title: TITLE })
+            }}
+          />
+          <Button key="band-refresh" plain label="Làm mới" onPress={() => refresh($, opts)} />
+        </Box>
+      </Box>
+    )
+  })
+
   on('command.run', { command: 'aipm' }, async $ => {
-    if ((await $.ui.panes()).some(p => p.id === PANE && p.isShown)) {
+    if (await isPaneShown($)) {
       await $.ui.close({ id: PANE })
       return { text: 'AIPM: đã ẩn sidebar (gõ /aipm để mở lại).' }
     }
