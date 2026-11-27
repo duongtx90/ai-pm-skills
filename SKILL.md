@@ -43,7 +43,7 @@ To prevent task misattribution, unsolicited MCP calls, and corrupting AIPM with 
 
 Human users can onboard any AI Agent by pasting this prompt:
 
-> *"Connect to my AI-PM project. Register `ai-pm-mcp` with endpoint `https://prj-api.brewmonster.vn/api/v1/mcp` and token `<YOUR_AGENT_TOKEN>` (Bearer auth)."*
+> *"Connect to my AI-PM project. Register `ai-pm-mcp` with endpoint `https://api.aipm.io.vn/api/v1/mcp` and token `<YOUR_AGENT_TOKEN>` (Bearer auth)."*
 
 ### Auto-Config JSON (`.agents/mcp_config.json` or `~/.gemini/config/mcp_config.json`)
 ```json
@@ -51,7 +51,7 @@ Human users can onboard any AI Agent by pasting this prompt:
   "mcpServers": {
     "ai-pm-mcp": {
       "type": "http",
-      "url": "https://prj-api.brewmonster.vn/api/v1/mcp",
+      "url": "https://api.aipm.io.vn/api/v1/mcp",
       "headers": { "Authorization": "Bearer <YOUR_AGENT_TOKEN>" }
     }
   }
@@ -165,12 +165,38 @@ Every issue created via MCP (`create_issue` or `create_issues`) **MUST include 1
      ```
 
 ### 🖼️ Rule 9: Image & Attachment Management (Issue & Wiki)
-- **Local Partitioned Storage**: Attachments are stored on local server disk partitioned strictly by `<orgId>/<projectId>/<attachmentId>.<ext>` to allow clean, bulk project-level purge.
-- **Dual-Mode Upload**: Agents can upload screenshots, architectural diagrams, and error dumps using `base64Data`:
-  - **Issue Attachments**: `upload_issue_attachment(identifier, filename, base64Data, contentType)`
-  - **Wiki Attachments**: `upload_wiki_attachment(projectKey, slug, filename, base64Data, contentType)`
-- **Immediate Markdown Embedding**: The returned attachment payload provides `url` (`/api/v1/attachments/view/<id>`, a stable reference that needs auth — the web app swaps it for a short-lived signed link when rendering). Embed images with `![filename](/api/v1/attachments/view/<id>)` and other files as links `[filename](/api/v1/attachments/view/<id>)`. Never paste `signed_url` into content (it expires in ~15 min).
-- **Allowed files (v2.9.0)**: jpg/png/gif/webp ≤ 10 MB; pdf/docx/xlsx/pptx/zip ≤ 20 MB; csv/txt. Type is detected from content; svg/html/exe are rejected. Workspace storage quota applies.
+
+**Upload files with HTTP `multipart/form-data` from your own shell. Never paste file bytes into a tool call.**
+
+`ai-pm-mcp` is always the remote HTTP endpoint (`https://api.aipm.io.vn/api/v1/mcp`) — there is **no local stdio MCP**, and the file lives on *your* machine, not on the server. So the server can neither read a path you pass nor receive bytes except through your context. The one method that works is a client-side HTTP upload:
+
+```bash
+# AIPM_TOKEN = the same `ag_live_...` token already in your MCP config
+#              (.mcp.json / .agents/mcp_config.json → headers.Authorization)
+export AIPM_TOKEN=ag_live_...
+export AIPM_API=https://api.aipm.io.vn/api/v1
+
+# Issue attachment
+curl -sS -X POST "$AIPM_API/issues/AIPM-68/attachments" \
+  -H "Authorization: Bearer $AIPM_TOKEN" \
+  -F "file=@/absolute/path/screenshot.png"
+
+# Wiki attachment (multi-segment slug goes in the query string)
+curl -sS -X POST "$AIPM_API/projects/AIPM/wiki-attachments?slug=specs/architecture" \
+  -H "Authorization: Bearer $AIPM_TOKEN" \
+  -F "file=@/absolute/path/diagram.png"
+```
+
+Response is `201` with `{ id, filename, file_size, content_type, url, signed_url, ... }`.
+
+Rules that follow from this:
+
+- **Never pass `base64Data` for images or documents.** You would have to reproduce the whole encoded string verbatim (a 39 KB JPEG = 52,140 base64 chars); it gets truncated or mangled, the server rejects it with `415 UNSUPPORTED_FILE_TYPE`, and you loop. `upload_issue_attachment` / `upload_wiki_attachment` are acceptable only for tiny text payloads (a few KB) where you already hold the exact string.
+- **Never pass a local file path to an MCP tool.** There is no `filePath` parameter and no stdio server; a path is meaningless to the remote API and will never resolve.
+- **The file must be readable by your own tools.** Chat-app temp dirs (e.g. `~/Library/Containers/...Telegram.../tmp/`) and anything outside your workspace sandbox will fail — copy it into the workspace first, or ask the human to attach it in the web UI.
+- **Immediate Markdown Embedding**: the returned payload's `url` (`/api/v1/attachments/view/<id>`) is the stable reference — the web app swaps it for a short-lived signed link when rendering. Embed images with `![filename](/api/v1/attachments/view/<id>)` and other files as `[filename](/api/v1/attachments/view/<id>)`. Never paste `signed_url` into content (it expires in ~10–15 min).
+- **Allowed files (v2.9.0)**: jpg/png/gif/webp ≤ 10 MB; pdf/docx/xlsx/pptx/zip ≤ 20 MB; csv/txt (UTF-8). Type is detected from the file content, not the extension; svg/html/exe are rejected. Workspace storage quota applies (`413 STORAGE_QUOTA_EXCEEDED`).
+- **Storage layout**: local server disk, partitioned `<orgId>/<projectId>/<attachmentId>.<ext>`, so a project purge can remove its files cleanly.
 - **Discovery & Cleanup**:
   - Issues: `list_issue_attachments(identifier)` / `delete_issue_attachment(identifier, attachmentId)`
   - Wiki: `list_wiki_attachments(projectKey, slug)` / `delete_wiki_attachment(projectKey, slug, attachmentId)`

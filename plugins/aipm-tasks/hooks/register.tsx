@@ -45,7 +45,7 @@ function readOptions(raw: Readonly<Record<string, unknown>>): Options {
   const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
   return {
     token: str(raw.token),
-    apiBaseUrl: str(raw.apiBaseUrl).replace(/\/+$/, '') || 'https://prj-api.brewmonster.vn/api/v1',
+    apiBaseUrl: str(raw.apiBaseUrl).replace(/\/+$/, '') || 'https://api.aipm.io.vn/api/v1',
     projectKey: str(raw.projectKey).toUpperCase(),
     orgId: str(raw.orgId),
     refreshSeconds: typeof raw.refreshSeconds === 'number' ? raw.refreshSeconds : 60,

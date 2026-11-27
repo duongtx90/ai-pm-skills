@@ -1,6 +1,6 @@
 {
   "name": "aipm-tasks",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "AI-PM tasks in Claude Code: a band above the prompt with open-task counts, and a sidebar with status tabs and task detail. Only in repos with .aipm/config.json; /aipm or the band's Tasks button shows or hides the sidebar.",
   "author": {
     "name": "duongtx90"
@@ -9,7 +9,7 @@
   "types": "./types/index.d.ts",
   "network": {
     "hosts": [
-      "prj-api.brewmonster.vn"
+      "api.aipm.io.vn"
     ]
   },
   "userConfig": {
@@ -23,7 +23,7 @@
       "type": "string",
       "title": "API base URL",
       "description": "AIPM REST API base, ending in /api/v1",
-      "default": "https://prj-api.brewmonster.vn/api/v1"
+      "default": "https://api.aipm.io.vn/api/v1"
     },
     "projectKey": {
       "type": "string",

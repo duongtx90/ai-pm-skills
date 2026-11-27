@@ -158,8 +158,24 @@ Flags a blocker on a task.
   - `reason` *(required, string)*: Cause of blocker
   - `blockerType` *(optional, string)*: `'TECHNICAL'` | `'DEPENDENCY'` | `'DOMAIN'`
 
+### Attaching files — use HTTP multipart, not the MCP base64 tools
+
+There is no stdio MCP and no `filePath` argument: the MCP server is remote (`https://api.aipm.io.vn/api/v1/mcp`), so a path on your machine means nothing to it and bytes can only reach it through a Base64 string you reproduce in the tool call. For anything bigger than a few KB that fails (a 39 KB JPEG = 52,140 base64 chars) and loops on `415 UNSUPPORTED_FILE_TYPE`. Upload from your own shell instead — see SKILL.md Rule 9.
+
+```bash
+curl -sS -X POST "https://api.aipm.io.vn/api/v1/issues/AIPM-68/attachments" \
+  -H "Authorization: Bearer $AIPM_TOKEN" \
+  -F "file=@/absolute/path/screenshot.png"
+
+curl -sS -X POST "https://api.aipm.io.vn/api/v1/projects/AIPM/wiki-attachments?slug=specs/architecture" \
+  -H "Authorization: Bearer $AIPM_TOKEN" \
+  -F "file=@/absolute/path/diagram.png"
+```
+
+`$AIPM_TOKEN` is the `ag_live_...` token already in your MCP config. `201` returns the same attachment object as the MCP tools (`id`, `url`, `signed_url`, …). The endpoint accepts `multipart/form-data` with a `file` field **or** JSON `{ filename, base64Data }` — the MCP tools always use the JSON branch.
+
 ### `upload_issue_attachment`
-Uploads a file attachment to an issue using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
+Uploads a file attachment to an issue using Base64 encoded file data. **Only for tiny text payloads (a few KB)** — images/documents must go through the multipart upload above. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `identifier` *(required, string)*: Issue identifier (e.g. `'AIPM-68'`)
   - `filename` *(required, string)*: Attachment filename (e.g. `'screenshot.png'`)
@@ -290,7 +306,7 @@ Links a tracking issue to a wiki document/specification to establish traceabilit
 - **Returns**: `{ success: true, message: "Linked issue AIPM-46 to wiki page 'specs/quest-system'" }`
 
 ### `upload_wiki_attachment`
-Uploads a file attachment to a project wiki page using Base64 encoded file data. Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
+Uploads a file attachment to a project wiki page using Base64 encoded file data. **Only for tiny text payloads (a few KB)** — use `curl -F "file=@path" .../projects/:key/wiki-attachments?slug=...` for images/documents (see "Attaching files" above). Allowed (detected from file content, not the extension): images jpg/png/gif/webp ≤ 10 MB; pdf, docx, xlsx, pptx, zip ≤ 20 MB; csv/txt (UTF-8, `.csv`/`.txt` extension). Anything else (svg, html, exe…) → `isError` 415 `UNSUPPORTED_FILE_TYPE`; too large → 413 `FILE_TOO_LARGE`; workspace quota full → 413 `STORAGE_QUOTA_EXCEEDED`. `contentType` is ignored (kept for compatibility).
 - **Parameters**:
   - `projectKey` *(required, string)*: Target project key prefix (e.g. `'AIPM'`)
   - `slug` *(required, string)*: Wiki page slug (e.g. `'specs/architecture'`)

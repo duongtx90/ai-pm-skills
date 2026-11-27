@@ -15,7 +15,7 @@
   "mcpServers": {
     "ai-pm": {
       "type": "http",
-      "url": "https://prj-api.brewmonster.vn/api/v1/mcp",
+      "url": "https://api.aipm.io.vn/api/v1/mcp",
       "headers": { "Authorization": "Bearer ${user_config.aipm_token}" }
     }
   }

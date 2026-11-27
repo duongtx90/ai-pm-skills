@@ -14,7 +14,7 @@ set -eu
 REPO=duongtx90/ai-pm-skills
 SKILL=ai-pm-skills
 NAME=ai-pm-mcp
-MCP_URL=${AIPM_MCP_URL:-https://prj-api.brewmonster.vn/api/v1/mcp}
+MCP_URL=${AIPM_MCP_URL:-https://api.aipm.io.vn/api/v1/mcp}
 CODEX_HOME=${CODEX_HOME:-$HOME/.codex}
 REASONIX_HOME=${REASONIX_HOME:-$HOME/.reasonix}
 OPENCLAW_HOME=$HOME/.openclaw
